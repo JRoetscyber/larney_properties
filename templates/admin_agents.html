@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Manage Agents – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Manage Agents</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-people-fill me-2" style="color:var(--lp-orange);"></i>Manage Agents
+    </h1>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+
+    <!-- ── Create new agent card ──────────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm mb-5" style="border-radius:var(--lp-radius);overflow:hidden;">
+      <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-4" style="color:var(--lp-navy);">
+          <i class="bi bi-person-plus-fill lp-icon-accent me-2"></i>Create New Agent Account
+        </h5>
+
+        <form method="POST" action="{{ url_for('admin_create_agent') }}" novalidate id="createAgentForm">
+          <div class="row g-3">
+            <div class="col-12 col-sm-4">
+              <label for="new_username" class="form-label fw-semibold">Username</label>
+              <input type="text" id="new_username" name="username" class="form-control"
+                     placeholder="e.g. janedoe" required autocomplete="off" />
+            </div>
+            <div class="col-12 col-sm-4">
+              <label for="new_password" class="form-label fw-semibold">Temporary Password</label>
+              <div class="input-group">
+                <input type="password" id="new_password" name="password" class="form-control"
+                       placeholder="Min. 6 characters" minlength="6" required autocomplete="off" />
+                <button type="button" class="btn btn-outline-secondary" tabindex="-1"
+                        onclick="togglePw('new_password', this)" title="Show/hide password">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-12 col-sm-4">
+              <label for="confirm_password" class="form-label fw-semibold">Confirm Password</label>
+              <div class="input-group">
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control"
+                       placeholder="Repeat password" required autocomplete="off" />
+                <button type="button" class="btn btn-outline-secondary" tabindex="-1"
+                        onclick="togglePw('confirm_password', this)" title="Show/hide password">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              <div id="pw_match_msg" class="form-text"></div>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn lp-btn-primary px-5" id="createBtn" disabled>
+                <i class="bi bi-plus-circle me-1"></i>Create Agent
+              </button>
+            </div>
+          </div>
+          <p class="form-text mt-2 mb-0">
+            The agent can update their profile (name, photo, phone, email) and change their password after logging in.
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Agents table ───────────────────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm" style="border-radius:var(--lp-radius);overflow:hidden;">
+      <div class="card-header border-0 px-4 py-3"
+           style="background:var(--lp-navy);">
+        <h5 class="text-white fw-bold mb-0 fs-6">
+          <i class="bi bi-people-fill me-2" style="color:var(--lp-orange);"></i>
+          All Agents &nbsp;<span class="badge" style="background:var(--lp-orange);font-size:0.75rem;">{{ agents|length }}</span>
+        </h5>
+      </div>
+
+      {% if agents %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead style="background:#f5f5f5;">
+            <tr>
+              <th class="ps-4 py-3" style="color:var(--lp-navy);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;">Agent</th>
+              <th class="py-3" style="color:var(--lp-navy);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;">Contact</th>
+              <th class="py-3 d-none d-md-table-cell" style="color:var(--lp-navy);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;">Listings</th>
+              <th class="py-3 d-none d-lg-table-cell" style="color:var(--lp-navy);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;">Joined</th>
+              <th class="pe-4 py-3 text-end" style="color:var(--lp-navy);font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;border:none;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in agents %}
+            <tr>
+              <!-- Avatar + username -->
+              <td class="ps-4 py-3">
+                <div class="d-flex align-items-center gap-3">
+                  {% if a['profile_image'] %}
+                    <img src="{{ url_for('static', filename='uploads/agents/' ~ a['profile_image']) }}"
+                         alt="{{ a['username'] }}"
+                         class="rounded-circle"
+                         style="width:44px;height:44px;object-fit:cover;border:2px solid var(--lp-orange);flex-shrink:0;" />
+                  {% else %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:44px;height:44px;background:linear-gradient(135deg,var(--lp-navy),#2c3e7a);flex-shrink:0;">
+                      <i class="bi bi-person-fill text-white"></i>
+                    </div>
+                  {% endif %}
+                  <div>
+                    <p class="fw-semibold mb-0 small" style="color:var(--lp-navy);">
+                      {{ a['full_name'] or a['username'] }}
+                    </p>
+                    <p class="text-muted mb-0 small">
+                      @{{ a['username'] }}
+                      {% if a['is_admin'] %}
+                        &nbsp;<span class="badge" style="background:var(--lp-orange);font-size:0.68rem;">Admin</span>
+                      {% endif %}
+                    </p>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Contact -->
+              <td class="py-3">
+                {% if a['email'] %}
+                <p class="mb-1 small">
+                  <i class="bi bi-envelope-fill lp-icon-accent me-1"></i>
+                  <a href="mailto:{{ a['email'] }}" class="text-muted text-decoration-none">{{ a['email'] }}</a>
+                </p>
+                {% endif %}
+                {% if a['phone'] %}
+                <p class="mb-0 small">
+                  <i class="bi bi-telephone-fill lp-icon-accent me-1"></i>
+                  <span class="text-muted">{{ a['phone'] }}</span>
+                </p>
+                {% endif %}
+                {% if not a['email'] and not a['phone'] %}
+                <span class="text-muted small fst-italic">No contact info</span>
+                {% endif %}
+              </td>
+
+              <!-- Listing count -->
+              <td class="py-3 d-none d-md-table-cell">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                  <span class="badge rounded-pill px-3 py-2"
+                        style="background:rgba(241,91,34,0.12);color:var(--lp-orange);font-weight:600;">
+                    {{ a['listing_count'] }}
+                  </span>
+                </a>
+              </td>
+
+              <!-- Joined date -->
+              <td class="py-3 small text-muted d-none d-lg-table-cell">
+                {{ a['created_at'][:10] if a['created_at'] else '—' }}
+              </td>
+
+              <!-- Actions -->
+              <td class="pe-4 py-3 text-end">
+                {% if not a['is_admin'] and a['id'] != current_agent_obj['id'] %}
+                <form method="POST"
+                      action="{{ url_for('admin_delete_agent', target_id=a['id']) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Remove agent @{{ a['username'] | e }}? Their listings will be kept.')">
+                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove agent">
+                    <i class="bi bi-trash-fill me-1"></i>Remove
+                  </button>
+                </form>
+                {% else %}
+                <span class="text-muted small fst-italic">
+                  {% if a['is_admin'] %}Admin{% else %}You{% endif %}
+                </span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-people fs-1 text-muted"></i>
+        <p class="mt-3 text-muted">No agents found.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function togglePw(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    const icon  = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'bi bi-eye-slash-fill';
+    } else {
+      input.type = 'password';
+      icon.className = 'bi bi-eye-fill';
+    }
+  }
+
+  const pw1  = document.getElementById('new_password');
+  const pw2  = document.getElementById('confirm_password');
+  const msg  = document.getElementById('pw_match_msg');
+  const btn  = document.getElementById('createBtn');
+  const form = document.getElementById('createAgentForm');
+
+  function checkMatch() {
+    const v1 = pw1.value;
+    const v2 = pw2.value;
+    if (!v2) {
+      msg.textContent = '';
+      pw2.classList.remove('is-valid', 'is-invalid');
+      btn.disabled = true;
+      return;
+    }
+    if (v1 === v2 && v1.length >= 6) {
+      msg.textContent = 'Passwords match \u2713';
+      msg.style.color = 'green';
+      pw2.classList.add('is-valid');
+      pw2.classList.remove('is-invalid');
+      btn.disabled = false;
+    } else {
+      msg.textContent = v1 !== v2 ? 'Passwords do not match.' : 'Min. 6 characters required.';
+      msg.style.color = 'var(--bs-danger, red)';
+      pw2.classList.add('is-invalid');
+      pw2.classList.remove('is-valid');
+      btn.disabled = true;
+    }
+  }
+
+  pw1.addEventListener('input', checkMatch);
+  pw2.addEventListener('input', checkMatch);
+
+  /* Final guard: block submit if values somehow diverged */
+  form.addEventListener('submit', function(e) {
+    if (pw1.value !== pw2.value || pw1.value.length < 6) {
+      e.preventDefault();
+      msg.textContent = 'Passwords do not match — please re-enter.';
+      msg.style.color = 'var(--bs-danger, red)';
+      pw2.classList.add('is-invalid');
+      btn.disabled = true;
+    }
+  });
+</script>
+{% endblock %}

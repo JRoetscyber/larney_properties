@@ -712,6 +712,54 @@ main { flex: 1; }
   font-weight: 500;
 }
 
+/* --- Agent nav dropdown ------------------------------------ */
+.lp-agent-menu { color: rgba(255,255,255,0.85) !important; }
+.lp-agent-menu:hover { color: #fff !important; }
+
+/* --- Agent avatar (profile page + cards) ------------------- */
+.lp-agent-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--lp-orange);
+  box-shadow: 0 4px 16px rgba(241,91,34,0.25);
+}
+
+.lp-agent-avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--lp-navy) 0%, #2c3e7a 100%);
+  border: 3px solid var(--lp-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(27,38,86,0.20);
+}
+
+/* --- Agent card on property detail ------------------------- */
+.lp-agent-card-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--lp-orange);
+  flex-shrink: 0;
+}
+
+.lp-agent-card-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--lp-navy) 0%, #2c3e7a 100%);
+  border: 2px solid var(--lp-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 /* --- Animations -------------------------------------------- */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }

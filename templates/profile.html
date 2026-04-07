@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}My Profile – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">My Profile</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-person-circle me-2" style="color:var(--lp-orange);"></i>My Agent Profile
+    </h1>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row g-4 align-items-start">
+
+      <!-- ── LEFT: Avatar ──────────────────────────────────────────────────── -->
+      <div class="col-12 col-md-3 text-center">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:var(--lp-radius);">
+
+          {% if agent['profile_image'] %}
+            <img id="avatarPreview"
+                 src="{{ url_for('static', filename='uploads/agents/' ~ agent['profile_image']) }}"
+                 alt="{{ agent['username'] }}"
+                 class="lp-agent-avatar mx-auto d-block mb-3" />
+          {% else %}
+            <div id="avatarPlaceholder"
+                 class="lp-agent-avatar-placeholder mx-auto mb-3">
+              <i class="bi bi-person-fill text-white" style="font-size:2.8rem;"></i>
+            </div>
+            <img id="avatarPreview"
+                 src="#" alt="Preview"
+                 class="lp-agent-avatar mx-auto d-block mb-3 d-none" />
+          {% endif %}
+
+          <p class="fw-bold mb-0" style="color:var(--lp-navy);">
+            {{ agent['full_name'] or agent['username'] }}
+          </p>
+          <p class="small text-muted mb-3">
+            {% if agent['is_admin'] %}
+              <span class="badge" style="background:var(--lp-orange);">Admin</span>
+            {% else %}
+              Agent
+            {% endif %}
+          </p>
+
+          <!-- Photo upload triggers the profile form's hidden file input -->
+          <button type="button" class="btn lp-btn-outline btn-sm w-100" id="changePhotoBtn">
+            <i class="bi bi-camera-fill me-1"></i>Change Photo
+          </button>
+          <p class="form-text mt-1">PNG, JPG, WEBP &mdash; max 8 MB</p>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Profile form + Password form ──────────────────────────── -->
+      <div class="col-12 col-md-9">
+
+        <!-- ── Profile info form ────────────────────────────────────────── -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-4" style="color:var(--lp-navy);">
+              <i class="bi bi-person-fill lp-icon-accent me-2"></i>Profile Information
+            </h5>
+
+            <form method="POST" action="{{ url_for('agent_profile') }}"
+                  enctype="multipart/form-data" novalidate id="profileForm">
+              <input type="hidden" name="action" value="profile" />
+
+              <!-- Hidden file input (triggered by "Change Photo" button above) -->
+              <input type="file" id="profileImageInput" name="profile_image"
+                     accept=".png,.jpg,.jpeg,.webp" class="d-none" />
+
+              <div class="row g-4">
+                <div class="col-12 col-sm-6">
+                  <label for="full_name" class="form-label fw-semibold">Full Name</label>
+                  <input type="text" id="full_name" name="full_name" class="form-control"
+                         placeholder="e.g. Lani Larney"
+                         value="{{ agent['full_name'] or '' }}" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="phone" class="form-label fw-semibold">
+                    <i class="bi bi-telephone-fill lp-icon-accent me-1"></i>Phone / WhatsApp
+                  </label>
+                  <input type="tel" id="phone" name="phone" class="form-control"
+                         placeholder="e.g. 083 654 8010"
+                         value="{{ agent['phone'] or '' }}" />
+                </div>
+                <div class="col-12">
+                  <label for="email" class="form-label fw-semibold">
+                    <i class="bi bi-envelope-fill lp-icon-accent me-1"></i>Email Address
+                  </label>
+                  <input type="email" id="email" name="email" class="form-control"
+                         placeholder="e.g. you@larney.co.za"
+                         value="{{ agent['email'] or '' }}" />
+                </div>
+                <div class="col-12">
+                  <label for="bio" class="form-label fw-semibold">Short Bio</label>
+                  <textarea id="bio" name="bio" class="form-control" rows="3"
+                            placeholder="A short introduction shown on listings…">{{ agent['bio'] or '' }}</textarea>
+                </div>
+              </div>
+
+              <hr class="my-4" />
+              <div class="d-flex gap-3 justify-content-end">
+                <a href="{{ url_for('dashboard') }}" class="btn lp-btn-outline px-4">Cancel</a>
+                <button type="submit" class="btn lp-btn-primary px-5">
+                  <i class="bi bi-check-circle me-2"></i>Save Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- ── Change Password form ─────────────────────────────────────── -->
+        <div class="card border-0 shadow-sm" style="border-radius:var(--lp-radius);overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--lp-navy),#2c3e7a);"></div>
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-4" style="color:var(--lp-navy);">
+              <i class="bi bi-shield-lock-fill lp-icon-accent me-2"></i>Change Password
+            </h5>
+
+            <form method="POST" action="{{ url_for('agent_profile') }}" novalidate>
+              <input type="hidden" name="action" value="password" />
+
+              <div class="row g-4">
+                <div class="col-12">
+                  <label for="current_password" class="form-label fw-semibold">Current Password</label>
+                  <input type="password" id="current_password" name="current_password"
+                         class="form-control" required autocomplete="current-password" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="new_password" class="form-label fw-semibold">New Password</label>
+                  <input type="password" id="new_password" name="new_password"
+                         class="form-control" minlength="6" required autocomplete="new-password" />
+                  <div class="form-text">Minimum 6 characters.</div>
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="confirm_password" class="form-label fw-semibold">Confirm New Password</label>
+                  <input type="password" id="confirm_password" name="confirm_password"
+                         class="form-control" required autocomplete="new-password" />
+                </div>
+              </div>
+
+              <hr class="my-4" />
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn lp-btn-navy px-5">
+                  <i class="bi bi-lock-fill me-2"></i>Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div><!-- /col-md-9 -->
+    </div><!-- /row -->
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Avatar live preview ─────────────────────────────────────── */
+const changeBtn    = document.getElementById('changePhotoBtn');
+const fileInput    = document.getElementById('profileImageInput');
+const preview      = document.getElementById('avatarPreview');
+const placeholder  = document.getElementById('avatarPlaceholder');
+
+if (changeBtn && fileInput) {
+  changeBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.classList.remove('d-none');
+      if (placeholder) placeholder.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Client-side password match check ───────────────────────── */
+const pwForm     = document.querySelector('form[action*="profile"]:last-of-type');
+const newPw      = document.getElementById('new_password');
+const confirmPw  = document.getElementById('confirm_password');
+
+if (confirmPw) {
+  confirmPw.addEventListener('input', () => {
+    confirmPw.setCustomValidity(
+      confirmPw.value && confirmPw.value !== newPw.value
+        ? 'Passwords do not match.' : ''
+    );
+  });
+}
+</script>
+{% endblock %}

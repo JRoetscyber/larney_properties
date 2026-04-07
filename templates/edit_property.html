@@ -229,33 +229,57 @@
                 </div>
               </div>
 
-              <!-- ── AGENT CONTACT ──────────────────────────────────────── -->
+              <!-- ── AGENT DETAILS (from profile) ──────────────────── -->
               <h6 class="fw-bold text-uppercase mb-3 small mt-4"
                   style="color:var(--lp-orange);letter-spacing:1.2px;">
-                <i class="bi bi-person-lines-fill me-1"></i>Agent Contact Details
+                <i class="bi bi-person-fill me-1"></i>Your Agent Details
               </h6>
-              <p class="small text-muted mb-3">
-                These appear on the listing's contact buttons (Call, WhatsApp, Email).
-                Leave blank to use the agency defaults.
-              </p>
-              <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6">
-                  <label for="agent_phone" class="form-label fw-semibold">
-                    <i class="bi bi-telephone-fill lp-icon-accent me-1"></i>Phone / WhatsApp Number
-                  </label>
-                  <input type="tel" id="agent_phone" name="agent_phone" class="form-control"
-                         placeholder="e.g. 083 654 8010"
-                         value="{{ form.get('agent_phone', '') }}" />
+
+              {% if current_agent_obj and (current_agent_obj['phone'] or current_agent_obj['email']) %}
+              <div class="d-flex align-items-center gap-3 p-3 rounded-3 border mb-4"
+                   style="background:#f8f9fa;">
+                {% if current_agent_obj['profile_image'] %}
+                  <img src="{{ url_for('static', filename='uploads/agents/' ~ current_agent_obj['profile_image']) }}"
+                       alt="{{ current_agent }}"
+                       class="rounded-circle"
+                       style="width:52px;height:52px;object-fit:cover;border:2px solid var(--lp-orange);flex-shrink:0;" />
+                {% else %}
+                  <div class="rounded-circle d-flex align-items-center justify-content-center"
+                       style="width:52px;height:52px;background:var(--lp-navy);flex-shrink:0;">
+                    <i class="bi bi-person-fill text-white fs-5"></i>
+                  </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                  <p class="fw-semibold mb-0" style="color:var(--lp-navy);">
+                    {{ current_agent_obj['full_name'] or current_agent }}
+                  </p>
+                  <p class="small text-muted mb-0">
+                    {% if current_agent_obj['phone'] %}
+                      <i class="bi bi-telephone-fill me-1"></i>{{ current_agent_obj['phone'] }}
+                    {% endif %}
+                    {% if current_agent_obj['phone'] and current_agent_obj['email'] %}&nbsp;&bull;&nbsp;{% endif %}
+                    {% if current_agent_obj['email'] %}
+                      <i class="bi bi-envelope-fill me-1"></i>{{ current_agent_obj['email'] }}
+                    {% endif %}
+                  </p>
                 </div>
-                <div class="col-12 col-md-6">
-                  <label for="agent_email" class="form-label fw-semibold">
-                    <i class="bi bi-envelope-fill lp-icon-accent me-1"></i>Email Address
-                  </label>
-                  <input type="email" id="agent_email" name="agent_email" class="form-control"
-                         placeholder="e.g. agent@larney.co.za"
-                         value="{{ form.get('agent_email', '') }}" />
+                <a href="{{ url_for('agent_profile') }}" class="btn lp-btn-outline btn-sm">
+                  <i class="bi bi-pencil-fill me-1"></i>Edit
+                </a>
+              </div>
+              {% else %}
+              <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+                <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+                <div>
+                  <strong>Your profile is incomplete.</strong>
+                  Add your phone and email so buyers can contact you directly on this listing.
+                  <br>
+                  <a href="{{ url_for('agent_profile') }}" class="alert-link fw-semibold">
+                    Complete your profile &rarr;
+                  </a>
                 </div>
               </div>
+              {% endif %}
 
               <!-- ── SUBMIT ──────────────────────────────────────────────── -->
               <hr class="my-4" />

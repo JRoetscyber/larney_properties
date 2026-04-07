@@ -15,8 +15,9 @@ app.secret_key = "larney-properties-secret-key"
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 DATABASE     = os.path.join(BASE_DIR, "properties.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+UPLOAD_FOLDER        = os.path.join(BASE_DIR, "static", "uploads")
+UPLOAD_FOLDER_AGENTS = os.path.join(BASE_DIR, "static", "uploads", "agents")
+ALLOWED_EXTENSIONS   = {"png", "jpg", "jpeg", "webp"}
 
 app.config["UPLOAD_FOLDER"]      = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
@@ -74,8 +75,8 @@ def init_db():
 
 
 def migrate_db():
-    """Safely add new columns to an existing properties table."""
-    new_columns = [
+    """Safely add new columns to existing tables and seed admin flag."""
+    property_cols = [
         ("bedrooms",      "INTEGER DEFAULT 0"),
         ("bathrooms",     "INTEGER DEFAULT 0"),
         ("size_sqm",      "INTEGER DEFAULT 0"),
@@ -84,13 +85,29 @@ def migrate_db():
         ("is_featured",   "INTEGER DEFAULT 0"),
         ("agent_phone",   "TEXT    DEFAULT ''"),
         ("agent_email",   "TEXT    DEFAULT ''"),
+        ("agent_id",      "INTEGER"),
+    ]
+    agent_cols = [
+        ("full_name",     "TEXT    DEFAULT ''"),
+        ("email",         "TEXT    DEFAULT ''"),
+        ("phone",         "TEXT    DEFAULT ''"),
+        ("bio",           "TEXT    DEFAULT ''"),
+        ("profile_image", "TEXT"),
+        ("is_admin",      "INTEGER DEFAULT 0"),
     ]
     with sqlite3.connect(DATABASE) as db:
-        for col, defn in new_columns:
+        for col, defn in property_cols:
             try:
                 db.execute(f"ALTER TABLE properties ADD COLUMN {col} {defn}")
             except sqlite3.OperationalError:
-                pass  # Column already exists
+                pass
+        for col, defn in agent_cols:
+            try:
+                db.execute(f"ALTER TABLE agents ADD COLUMN {col} {defn}")
+            except sqlite3.OperationalError:
+                pass
+        # Ensure the original admin account is always marked as admin
+        db.execute("UPDATE agents SET is_admin = 1 WHERE username = 'admin'")
         db.commit()
 
 
@@ -105,9 +122,37 @@ def login_required(f):
     return decorated
 
 
+def admin_required(f):
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if "agent_id" not in session:
+            flash("Please log in to access that page.", "warning")
+            return redirect(url_for("login"))
+        agent = get_db().execute(
+            "SELECT is_admin FROM agents WHERE id = ?", (session["agent_id"],)
+        ).fetchone()
+        if not agent or not agent["is_admin"]:
+            flash("Admin access is required for that page.", "danger")
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return decorated
+
+
 @app.context_processor
 def inject_current_agent():
-    return {"current_agent": session.get("agent_username")}
+    agent_obj  = None
+    is_admin   = False
+    if "agent_id" in session:
+        agent_obj = get_db().execute(
+            "SELECT * FROM agents WHERE id = ?", (session["agent_id"],)
+        ).fetchone()
+        if agent_obj:
+            is_admin = bool(agent_obj["is_admin"])
+    return {
+        "current_agent":          session.get("agent_username"),
+        "current_agent_is_admin": is_admin,
+        "current_agent_obj":      agent_obj,
+    }
 
 
 # ── Utility ───────────────────────────────────────────────────────────────────
@@ -184,19 +229,39 @@ def index():
 
 @app.route("/property/<int:prop_id>")
 def property_detail(prop_id):
-    db   = get_db()
-    prop = db.execute("SELECT * FROM properties WHERE id = ?", (prop_id,)).fetchone()
-    if prop is None:
+    db  = get_db()
+    row = db.execute("""
+        SELECT p.*,
+               a.full_name     AS agent_name,
+               a.phone         AS agent_profile_phone,
+               a.email         AS agent_profile_email,
+               a.profile_image AS agent_profile_image,
+               a.bio           AS agent_bio
+        FROM   properties p
+        LEFT JOIN agents a ON p.agent_id = a.id
+        WHERE  p.id = ?
+    """, (prop_id,)).fetchone()
+    if row is None:
         flash("Property not found.", "warning")
         return redirect(url_for("index"))
+
+    prop = row
     price_numeric = parse_price_numeric(prop["price"])
-    agent_phone_wa = to_wa_number(prop["agent_phone"]) if prop["agent_phone"] else "27836548010"
-    agent_phone_display = prop["agent_phone"] if prop["agent_phone"] else "083 654 8010"
-    agent_email = prop["agent_email"] if prop["agent_email"] else "lani@larney.co.za"
+
+    # Contact priority: agent profile → property fields → agency defaults
+    raw_phone           = prop["agent_profile_phone"] or prop["agent_phone"] or "083 654 8010"
+    agent_email         = prop["agent_profile_email"] or prop["agent_email"] or "lani@larney.co.za"
+    agent_name          = prop["agent_name"] or "Larney Properties"
+    agent_profile_image = prop["agent_profile_image"]
+    agent_phone_wa      = to_wa_number(raw_phone)
+    agent_phone_display = raw_phone
+
     return render_template("property.html", prop=prop, price_numeric=price_numeric,
                            agent_phone_wa=agent_phone_wa,
                            agent_phone_display=agent_phone_display,
-                           agent_email=agent_email)
+                           agent_email=agent_email,
+                           agent_name=agent_name,
+                           agent_profile_image=agent_profile_image)
 
 
 @app.route("/bond-calculator")
@@ -218,9 +283,6 @@ def upload():
         property_type = request.form.get("property_type", "House")
         status        = request.form.get("status",        "For Sale")
         is_featured   = 1 if request.form.get("is_featured") else 0
-        agent_phone   = request.form.get("agent_phone",   "").strip()
-        agent_email   = request.form.get("agent_email",   "").strip()
-
         errors = []
         if not title:    errors.append("Title is required.")
         if not price:    errors.append("Price is required.")
@@ -241,17 +303,22 @@ def upload():
             return render_template("upload.html", form=request.form, image_filename=image_filename)
 
         db = get_db()
+        # Pull contact info from agent's current profile
+        db_agent = db.execute(
+            "SELECT phone, email FROM agents WHERE id = ?", (session["agent_id"],)
+        ).fetchone()
         db.execute(
             """
             INSERT INTO properties
                 (title, price, location, description, image_filename,
                  bedrooms, bathrooms, size_sqm, property_type, status, is_featured,
-                 agent_phone, agent_email)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 agent_phone, agent_email, agent_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (title, price, location, description, image_filename,
              bedrooms, bathrooms, size_sqm, property_type, status, is_featured,
-             agent_phone, agent_email),
+             db_agent["phone"] or "", db_agent["email"] or "",
+             session["agent_id"]),
         )
         db.commit()
         flash(f'"{title}" has been listed successfully!', "success")
@@ -280,9 +347,6 @@ def edit_property(prop_id):
         property_type = request.form.get("property_type", "House")
         status        = request.form.get("status",        "For Sale")
         is_featured   = 1 if request.form.get("is_featured") else 0
-        agent_phone   = request.form.get("agent_phone",   "").strip()
-        agent_email   = request.form.get("agent_email",   "").strip()
-
         errors = []
         if not title:    errors.append("Title is required.")
         if not price:    errors.append("Price is required.")
@@ -311,13 +375,12 @@ def edit_property(prop_id):
             """
             UPDATE properties SET
                 title=?, price=?, location=?, description=?, image_filename=?,
-                bedrooms=?, bathrooms=?, size_sqm=?, property_type=?, status=?, is_featured=?,
-                agent_phone=?, agent_email=?
+                bedrooms=?, bathrooms=?, size_sqm=?, property_type=?, status=?, is_featured=?
             WHERE id=?
             """,
             (title, price, location, description, image_filename,
              bedrooms, bathrooms, size_sqm, property_type, status, is_featured,
-             agent_phone, agent_email, prop_id),
+             prop_id),
         )
         db.commit()
         flash(f'"{title}" has been updated successfully!', "success")
@@ -369,6 +432,164 @@ def api_properties():
     return jsonify({"properties": [dict(r) for r in rows]})
 
 
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def agent_profile():
+    db    = get_db()
+    agent = db.execute("SELECT * FROM agents WHERE id = ?", (session["agent_id"],)).fetchone()
+
+    if request.method == "POST":
+        action = request.form.get("action", "profile")
+
+        if action == "password":
+            current_pw  = request.form.get("current_password", "")
+            new_pw      = request.form.get("new_password",      "").strip()
+            confirm_pw  = request.form.get("confirm_password",  "").strip()
+
+            if not check_password_hash(agent["password_hash"], current_pw):
+                flash("Current password is incorrect.", "danger")
+            elif len(new_pw) < 6:
+                flash("New password must be at least 6 characters.", "danger")
+            elif new_pw != confirm_pw:
+                flash("Passwords do not match.", "danger")
+            else:
+                db.execute(
+                    "UPDATE agents SET password_hash = ? WHERE id = ?",
+                    (generate_password_hash(new_pw), session["agent_id"]),
+                )
+                db.commit()
+                flash("Password updated successfully.", "success")
+            return redirect(url_for("agent_profile"))
+
+        # action == "profile"
+        full_name = request.form.get("full_name", "").strip()
+        email     = request.form.get("email",     "").strip()
+        phone     = request.form.get("phone",     "").strip()
+        bio       = request.form.get("bio",       "").strip()
+
+        profile_image = agent["profile_image"]
+        file = request.files.get("profile_image")
+        if file and file.filename:
+            if not allowed_file(file.filename):
+                flash("Only PNG, JPG, JPEG, or WEBP images are allowed.", "danger")
+                return redirect(url_for("agent_profile"))
+            ext      = file.filename.rsplit(".", 1)[1].lower()
+            filename = secure_filename(f"agent_{session['agent_id']}.{ext}")
+            file.save(os.path.join(UPLOAD_FOLDER_AGENTS, filename))
+            profile_image = filename
+
+        db.execute(
+            "UPDATE agents SET full_name=?, email=?, phone=?, bio=?, profile_image=? WHERE id=?",
+            (full_name, email, phone, bio, profile_image, session["agent_id"]),
+        )
+        db.commit()
+        flash("Profile updated successfully.", "success")
+        return redirect(url_for("agent_profile"))
+
+    return render_template("profile.html", agent=agent)
+
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    db         = get_db()
+    agent      = db.execute("SELECT * FROM agents WHERE id = ?", (session["agent_id"],)).fetchone()
+    properties = db.execute(
+        "SELECT * FROM properties WHERE agent_id = ? ORDER BY created_at DESC",
+        (session["agent_id"],),
+    ).fetchall()
+    raw = db.execute("""
+        SELECT
+            COUNT(*)  AS total,
+            SUM(CASE WHEN status = 'For Sale' THEN 1 ELSE 0 END) AS for_sale,
+            SUM(CASE WHEN status = 'To Let'   THEN 1 ELSE 0 END) AS to_let
+        FROM properties WHERE agent_id = ?
+    """, (session["agent_id"],)).fetchone()
+    stats = {
+        "total":    raw["total"]    or 0,
+        "for_sale": raw["for_sale"] or 0,
+        "to_let":   raw["to_let"]   or 0,
+    }
+    return render_template("dashboard.html", agent=agent, properties=properties, stats=stats)
+
+
+# ── Admin: agent management ────────────────────────────────────────────────────
+@app.route("/admin/agents")
+@admin_required
+def admin_agents():
+    db     = get_db()
+    agents = db.execute("""
+        SELECT a.*, COUNT(p.id) AS listing_count
+        FROM   agents a
+        LEFT JOIN properties p ON p.agent_id = a.id
+        GROUP BY a.id
+        ORDER BY a.is_admin DESC, a.created_at ASC
+    """).fetchall()
+    return render_template("admin_agents.html", agents=agents)
+
+
+@app.route("/admin/agents/create", methods=["POST"])
+@admin_required
+def admin_create_agent():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    confirm  = request.form.get("confirm_password", "")
+
+    errors = []
+    if not username:          errors.append("Username is required.")
+    if len(password) < 6:     errors.append("Password must be at least 6 characters.")
+    if password != confirm:   errors.append("Passwords do not match.")
+
+    if errors:
+        for e in errors:
+            flash(e, "danger")
+        return redirect(url_for("admin_agents"))
+
+    db       = get_db()
+    existing = db.execute("SELECT id FROM agents WHERE username = ?", (username,)).fetchone()
+    if existing:
+        flash(f'Username "{username}" is already taken.', "danger")
+        return redirect(url_for("admin_agents"))
+
+    db.execute(
+        "INSERT INTO agents (username, password_hash) VALUES (?, ?)",
+        (username, generate_password_hash(password)),
+    )
+    db.commit()
+    flash(f'Agent "{username}" created. They can now log in and complete their profile.', "success")
+    return redirect(url_for("admin_agents"))
+
+
+@app.route("/admin/agents/<int:target_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_agent(target_id):
+    db    = get_db()
+    agent = db.execute("SELECT * FROM agents WHERE id = ?", (target_id,)).fetchone()
+
+    if not agent:
+        flash("Agent not found.", "warning")
+        return redirect(url_for("admin_agents"))
+    if target_id == session["agent_id"]:
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for("admin_agents"))
+    if agent["is_admin"]:
+        flash("Admin accounts cannot be deleted.", "danger")
+        return redirect(url_for("admin_agents"))
+
+    # Remove profile image file if present
+    if agent["profile_image"]:
+        img_path = os.path.join(UPLOAD_FOLDER_AGENTS, agent["profile_image"])
+        if os.path.exists(img_path):
+            os.remove(img_path)
+
+    # Unlink properties so listings remain but lose the agent association
+    db.execute("UPDATE properties SET agent_id = NULL WHERE agent_id = ?", (target_id,))
+    db.execute("DELETE FROM agents WHERE id = ?", (target_id,))
+    db.commit()
+    flash(f'Agent "{agent["username"]}" removed. Their listings remain active.', "success")
+    return redirect(url_for("admin_agents"))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if "agent_id" in session:
@@ -403,7 +624,8 @@ def logout():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER,        exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER_AGENTS, exist_ok=True)
     init_db()
     migrate_db()
     app.run(debug=True, host='0.0.0.0', port=64000)

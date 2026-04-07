@@ -199,18 +199,59 @@
             </div>
           </div>
 
-          <!-- Contact card ────────────────────────────────────── -->
-          <div class="card border-0 shadow" style="border-radius:var(--lp-radius);">
+          <!-- Agent card ──────────────────────────────────────── -->
+          <div class="card border-0 shadow" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+
+            <!-- Square photo -->
+            {% if agent_profile_image %}
+              <img src="{{ url_for('static', filename='uploads/agents/' ~ agent_profile_image) }}"
+                   alt="{{ agent_name }}"
+                   style="width:100%;height:230px;object-fit:cover;object-position:top;display:block;" />
+            {% else %}
+              <div style="width:100%;height:180px;background:linear-gradient(135deg,var(--lp-navy) 0%,#2c3e7a 100%);display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-person-fill text-white" style="font-size:5rem;opacity:0.25;"></i>
+              </div>
+            {% endif %}
+
             <div class="card-body p-4">
-              <h6 class="fw-bold mb-3" style="color:var(--lp-navy);">
-                <i class="bi bi-person-fill lp-icon-accent me-2"></i>Interested? Get in Touch
-              </h6>
-              <p class="small text-muted mb-3">
-                Contact a Larney Properties agent for more information or to book a viewing.
+
+              <!-- Name + title -->
+              <p class="fw-bold mb-0 fs-6" style="color:var(--lp-navy);">{{ agent_name }}</p>
+              <p class="small mb-3" style="color:var(--lp-orange);font-weight:600;letter-spacing:0.3px;">
+                <i class="bi bi-patch-check-fill me-1"></i>Larney Properties Agent
               </p>
 
+              <!-- Bio -->
+              {% if prop['agent_bio'] %}
+              <p class="small text-muted mb-3" style="line-height:1.7;">{{ prop['agent_bio'] }}</p>
+              {% else %}
+              <p class="small text-muted mb-3" style="line-height:1.7;">
+                Contact me for more information or to arrange a private viewing.
+              </p>
+              {% endif %}
+
+              <!-- Contact details -->
+              <div class="mb-4 d-flex flex-column gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:32px;height:32px;background:rgba(241,91,34,0.1);border-radius:6px;">
+                    <i class="bi bi-telephone-fill" style="color:var(--lp-orange);font-size:0.85rem;"></i>
+                  </span>
+                  <span class="small fw-semibold" style="color:var(--lp-navy);">{{ agent_phone_display }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:32px;height:32px;background:rgba(241,91,34,0.1);border-radius:6px;">
+                    <i class="bi bi-envelope-fill" style="color:var(--lp-orange);font-size:0.85rem;"></i>
+                  </span>
+                  <span class="small" style="color:var(--lp-navy);word-break:break-all;">{{ agent_email }}</span>
+                </div>
+              </div>
+
+              <!-- Action buttons -->
               <a href="tel:+{{ agent_phone_wa }}" class="btn lp-btn-navy w-100 mb-2">
-                <i class="bi bi-telephone-fill me-2"></i>{{ agent_phone_display }}
+                <i class="bi bi-telephone-fill me-2"></i>Call Now
               </a>
               <a href="https://wa.me/{{ agent_phone_wa }}?text={{ ('Hi, I am interested in: ' ~ prop['title'] ~ ' - ' ~ prop['location']) | urlencode }}"
                  target="_blank" rel="noopener"
@@ -221,6 +262,7 @@
                  class="btn lp-btn-outline w-100">
                 <i class="bi bi-envelope-fill me-2"></i>Send Email
               </a>
+
             </div>
           </div>
 

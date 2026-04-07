@@ -47,17 +47,84 @@
             <i class="bi bi-calculator-fill me-1 opacity-75"></i>Bond Calculator
           </a>
         </li>
+        {% if current_agent %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+             href="{{ url_for('dashboard') }}">
+            <i class="bi bi-grid-fill me-1 opacity-75"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'agent_profile' %}active{% endif %}"
+             href="{{ url_for('agent_profile') }}">
+            <i class="bi bi-person-fill me-1 opacity-75"></i>Profile
+          </a>
+        </li>
+        {% if current_agent_is_admin %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'admin_agents' %}active{% endif %}"
+             href="{{ url_for('admin_agents') }}">
+            <i class="bi bi-people-fill me-1 opacity-75"></i>Manage Agents
+          </a>
+        </li>
+        {% endif %}
+        {% endif %}
       </ul>
 
       <div class="d-flex align-items-center gap-2">
         {% if current_agent %}
-          <span class="lp-nav-admin small d-none d-lg-inline">
-            <i class="bi bi-person-check-fill me-1"></i>{{ current_agent }}
-          </span>
+          <!-- Agent avatar dropdown -->
+          <div class="dropdown">
+            <button class="btn btn-link p-0 d-flex align-items-center gap-2 text-decoration-none lp-agent-menu"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              {% if current_agent_obj and current_agent_obj['profile_image'] %}
+                <img src="{{ url_for('static', filename='uploads/agents/' ~ current_agent_obj['profile_image']) }}"
+                     alt="{{ current_agent }}"
+                     class="rounded-circle"
+                     style="width:32px;height:32px;object-fit:cover;border:2px solid var(--lp-orange);" />
+              {% else %}
+                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                     style="width:32px;height:32px;background:var(--lp-orange);flex-shrink:0;">
+                  <i class="bi bi-person-fill text-white" style="font-size:0.9rem;"></i>
+                </div>
+              {% endif %}
+              <span class="lp-nav-admin small d-none d-lg-inline">
+                {{ current_agent_obj['full_name'] if current_agent_obj and current_agent_obj['full_name'] else current_agent }}
+              </span>
+              <i class="bi bi-chevron-down text-white-50 small d-none d-lg-inline"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width:200px;">
+              <li>
+                <a class="dropdown-item" href="{{ url_for('dashboard') }}">
+                  <i class="bi bi-grid-fill me-2" style="color:var(--lp-orange);"></i>My Dashboard
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{{ url_for('agent_profile') }}">
+                  <i class="bi bi-person-fill me-2" style="color:var(--lp-orange);"></i>My Profile
+                </a>
+              </li>
+              {% if current_agent_is_admin %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item" href="{{ url_for('admin_agents') }}">
+                  <i class="bi bi-people-fill me-2" style="color:var(--lp-navy);"></i>Manage Agents
+                </a>
+              </li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                  <i class="bi bi-box-arrow-right me-2"></i>Logout
+                </a>
+              </li>
+            </ul>
+          </div>
           <a href="{{ url_for('upload') }}" class="btn lp-btn-primary btn-sm px-3">
             <i class="bi bi-plus-circle me-1"></i>List Property
           </a>
-          <a href="{{ url_for('logout') }}" class="btn lp-btn-outline btn-sm px-3">
+          <a href="{{ url_for('logout') }}" class="btn btn-sm px-3"
+             style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:6px;">
             <i class="bi bi-box-arrow-right me-1"></i>Logout
           </a>
         {% else %}

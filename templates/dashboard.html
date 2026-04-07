@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Dashboard</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-grid-fill me-2" style="color:var(--lp-orange);"></i>My Dashboard
+    </h1>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+
+    <!-- ── Agent banner ──────────────────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm mb-5" style="border-radius:var(--lp-radius);overflow:hidden;">
+      <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+      <div class="card-body p-4">
+        <div class="row align-items-center g-4">
+
+          <!-- Avatar + name -->
+          <div class="col-12 col-md-auto d-flex align-items-center gap-3">
+            {% if agent['profile_image'] %}
+              <img src="{{ url_for('static', filename='uploads/agents/' ~ agent['profile_image']) }}"
+                   alt="{{ agent['username'] }}"
+                   class="lp-agent-avatar" style="width:80px;height:80px;" />
+            {% else %}
+              <div class="lp-agent-avatar-placeholder" style="width:80px;height:80px;">
+                <i class="bi bi-person-fill text-white" style="font-size:2rem;"></i>
+              </div>
+            {% endif %}
+            <div>
+              <h4 class="fw-bold mb-0" style="color:var(--lp-navy);">
+                {{ agent['full_name'] or agent['username'] }}
+              </h4>
+              <p class="text-muted small mb-0">
+                {% if agent['is_admin'] %}
+                  <span class="badge me-1" style="background:var(--lp-orange);">Admin</span>
+                {% endif %}
+                @{{ agent['username'] }}
+              </p>
+              {% if agent['phone'] or agent['email'] %}
+              <p class="small text-muted mb-0 mt-1">
+                {% if agent['phone'] %}
+                  <i class="bi bi-telephone-fill lp-icon-accent me-1"></i>{{ agent['phone'] }}
+                {% endif %}
+                {% if agent['phone'] and agent['email'] %}&nbsp;&bull;&nbsp;{% endif %}
+                {% if agent['email'] %}
+                  <i class="bi bi-envelope-fill lp-icon-accent me-1"></i>{{ agent['email'] }}
+                {% endif %}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="col-12 col-md d-flex flex-wrap gap-0 justify-content-md-center">
+            <div class="text-center px-4 border-end">
+              <div class="lp-stat-num" style="color:var(--lp-orange);font-size:1.8rem;">
+                {{ stats.total }}
+              </div>
+              <div class="lp-stat-label" style="color:#888;">Total Listings</div>
+            </div>
+            <div class="text-center px-4 border-end">
+              <div class="lp-stat-num" style="color:var(--lp-orange);font-size:1.8rem;">
+                {{ stats.for_sale }}
+              </div>
+              <div class="lp-stat-label" style="color:#888;">For Sale</div>
+            </div>
+            <div class="text-center px-4">
+              <div class="lp-stat-num" style="color:var(--lp-navy);font-size:1.8rem;">
+                {{ stats.to_let }}
+              </div>
+              <div class="lp-stat-label" style="color:#888;">To Let</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="col-12 col-md-auto d-flex flex-column gap-2 align-items-md-end">
+            <a href="{{ url_for('upload') }}" class="btn lp-btn-primary px-4">
+              <i class="bi bi-plus-circle me-2"></i>Add Listing
+            </a>
+            <a href="{{ url_for('agent_profile') }}" class="btn lp-btn-outline btn-sm px-4">
+              <i class="bi bi-pencil-fill me-1"></i>Edit Profile
+            </a>
+            {% if current_agent_is_admin %}
+            <a href="{{ url_for('admin_agents') }}" class="btn btn-sm px-4"
+               style="background:var(--lp-navy);color:#fff;border-radius:var(--lp-radius);">
+              <i class="bi bi-people-fill me-1"></i>Manage Agents
+            </a>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Profile incomplete warning ────────────────────────────────────── -->
+    {% if not agent['phone'] and not agent['email'] %}
+    <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+      <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+      <div>
+        <strong>Your profile is incomplete.</strong>
+        Buyers won't be able to contact you from your listings until you add a phone number or email.
+        <a href="{{ url_for('agent_profile') }}" class="alert-link fw-semibold ms-1">
+          Complete your profile &rarr;
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Listings grid ─────────────────────────────────────────────────── -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="lp-section-title text-start fw-bold mb-0 h4">My Listings</h2>
+    </div>
+
+    {% if properties %}
+    <div class="row g-4">
+      {% for p in properties %}
+      <div class="col-12 col-sm-6 col-xl-4 lp-fade-up"
+           style="animation-delay:{{ loop.index0 * 0.07 }}s;">
+
+        <div class="card lp-card shadow-sm h-100">
+
+          <!-- Image + overlay badges -->
+          <div class="lp-card-img-wrap">
+            {% if p['image_filename'] %}
+              <img src="{{ url_for('static', filename='uploads/' ~ p['image_filename']) }}"
+                   alt="{{ p['title'] }}" class="lp-card-img" />
+            {% else %}
+              <div class="lp-card-img-placeholder">
+                <i class="bi bi-house-fill fs-1 opacity-25" style="color:var(--lp-navy);"></i>
+              </div>
+            {% endif %}
+
+            <span class="position-absolute top-0 start-0 m-2 lp-badge-status
+                         {% if (p['status'] or 'For Sale') == 'For Sale' %}lp-badge-sale{% else %}lp-badge-let{% endif %}">
+              {{ p['status'] or 'For Sale' }}
+            </span>
+            <span class="position-absolute bottom-0 start-0 m-2 lp-badge-type">
+              {{ p['property_type'] or 'House' }}
+            </span>
+            {% if p['is_featured'] %}
+            <div class="lp-featured-ribbon">Featured</div>
+            {% endif %}
+          </div>
+
+          <!-- Card body -->
+          <div class="card-body d-flex flex-column p-3">
+            <div class="lp-price mb-1">R {{ p['price'] | format_price }}</div>
+            <h5 class="card-title fw-semibold mb-1 fs-6">{{ p['title'] }}</h5>
+            <p class="text-muted small mb-2">
+              <i class="bi bi-geo-alt-fill lp-icon-accent me-1"></i>{{ p['location'] }}
+            </p>
+
+            {% if p['bedrooms'] or p['bathrooms'] or p['size_sqm'] %}
+            <div class="lp-specs d-flex gap-3 flex-wrap mb-2">
+              {% if p['bedrooms'] %}
+              <span class="lp-spec-item">
+                <i class="bi bi-door-open-fill"></i>{{ p['bedrooms'] }} Bed{{ 's' if p['bedrooms'] != 1 }}
+              </span>
+              {% endif %}
+              {% if p['bathrooms'] %}
+              <span class="lp-spec-item">
+                <i class="bi bi-droplet-fill"></i>{{ p['bathrooms'] }} Bath{{ 's' if p['bathrooms'] != 1 }}
+              </span>
+              {% endif %}
+              {% if p['size_sqm'] %}
+              <span class="lp-spec-item">
+                <i class="bi bi-arrows-fullscreen"></i>{{ p['size_sqm'] }} m²
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <p class="small text-muted mb-0 mt-auto">
+              <i class="bi bi-clock me-1"></i>
+              Listed {{ p['created_at'][:10] if p['created_at'] else '—' }}
+            </p>
+          </div>
+
+          <!-- Card footer -->
+          <div class="card-footer bg-transparent border-0 pb-3 px-3">
+            <div class="d-flex gap-2">
+              <a href="{{ url_for('property_detail', prop_id=p['id']) }}"
+                 class="btn lp-btn-primary btn-sm flex-grow-1">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+              <a href="{{ url_for('edit_property', prop_id=p['id']) }}"
+                 class="btn btn-outline-warning btn-sm px-3" title="Edit">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+              <form method="POST"
+                    action="{{ url_for('delete_property', prop_id=p['id']) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Delete {{ p['title'] | e }}?')">
+                <button type="submit" class="btn btn-outline-danger btn-sm px-3" title="Delete">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-house-slash fs-1 text-muted"></i>
+      <p class="mt-3 text-muted">You haven't listed any properties yet.</p>
+      <a href="{{ url_for('upload') }}" class="btn lp-btn-primary mt-2">
+        <i class="bi bi-plus-circle me-2"></i>Add Your First Listing
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+{% endblock %}
