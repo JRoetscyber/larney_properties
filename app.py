@@ -2,6 +2,7 @@ import functools
 import os
 import re
 import sqlite3
+import requests
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, g, session, jsonify,
@@ -95,6 +96,10 @@ def migrate_db():
         ("profile_image", "TEXT"),
         ("is_admin",      "INTEGER DEFAULT 0"),
     ]
+    extra_property_cols = [
+        ("garages",       "INTEGER DEFAULT 0"),
+        ("erf_size_sqm",  "INTEGER DEFAULT 0"),
+    ]
     with sqlite3.connect(DATABASE) as db:
         for col, defn in property_cols:
             try:
@@ -106,6 +111,47 @@ def migrate_db():
                 db.execute(f"ALTER TABLE agents ADD COLUMN {col} {defn}")
             except sqlite3.OperationalError:
                 pass
+        for col, defn in extra_property_cols:
+            try:
+                db.execute(f"ALTER TABLE properties ADD COLUMN {col} {defn}")
+            except sqlite3.OperationalError:
+                pass
+        # seller leads table
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS seller_leads (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name       TEXT NOT NULL,
+                email           TEXT NOT NULL,
+                phone           TEXT NOT NULL,
+                contact_time    TEXT DEFAULT '',
+                address         TEXT NOT NULL,
+                suburb          TEXT DEFAULT '',
+                city            TEXT DEFAULT '',
+                property_type   TEXT DEFAULT 'House',
+                bedrooms        INTEGER DEFAULT 0,
+                bathrooms       INTEGER DEFAULT 0,
+                garages         INTEGER DEFAULT 0,
+                size_sqm        INTEGER DEFAULT 0,
+                erf_size_sqm    INTEGER DEFAULT 0,
+                asking_price    TEXT DEFAULT '',
+                occupied        TEXT DEFAULT '',
+                bond_outstanding TEXT DEFAULT '',
+                notes           TEXT DEFAULT '',
+                heard_from      TEXT DEFAULT '',
+                status          TEXT DEFAULT 'New',
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # property_images gallery table
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS property_images (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                property_id INTEGER NOT NULL,
+                filename    TEXT    NOT NULL,
+                sort_order  INTEGER DEFAULT 0,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         # Ensure the original admin account is always marked as admin
         db.execute("UPDATE agents SET is_admin = 1 WHERE username = 'admin'")
         db.commit()
@@ -136,6 +182,12 @@ def admin_required(f):
             return redirect(url_for("index"))
         return f(*args, **kwargs)
     return decorated
+
+
+@app.context_processor
+def inject_globals():
+    from datetime import datetime
+    return {"now": datetime.utcnow()}
 
 
 @app.context_processor
@@ -248,6 +300,14 @@ def property_detail(prop_id):
     prop = row
     price_numeric = parse_price_numeric(prop["price"])
 
+    # Gallery images
+    gallery = db.execute(
+        "SELECT filename FROM property_images WHERE property_id = ? ORDER BY sort_order",
+        (prop_id,),
+    ).fetchall()
+    if not gallery and prop["image_filename"]:
+        gallery = [{"filename": prop["image_filename"]}]
+
     # Contact priority: agent profile → property fields → agency defaults
     raw_phone           = prop["agent_profile_phone"] or prop["agent_phone"] or "083 654 8010"
     agent_email         = prop["agent_profile_email"] or prop["agent_email"] or "lani@larney.co.za"
@@ -261,7 +321,8 @@ def property_detail(prop_id):
                            agent_phone_display=agent_phone_display,
                            agent_email=agent_email,
                            agent_name=agent_name,
-                           agent_profile_image=agent_profile_image)
+                           agent_profile_image=agent_profile_image,
+                           gallery=gallery)
 
 
 @app.route("/bond-calculator")
@@ -279,7 +340,9 @@ def upload():
         description   = request.form.get("description",   "").strip()
         bedrooms      = request.form.get("bedrooms",      0)
         bathrooms     = request.form.get("bathrooms",     0)
+        garages       = request.form.get("garages",       0)
         size_sqm      = request.form.get("size_sqm",      0)
+        erf_size_sqm  = request.form.get("erf_size_sqm",  0)
         property_type = request.form.get("property_type", "House")
         status        = request.form.get("status",        "For Sale")
         is_featured   = 1 if request.form.get("is_featured") else 0
@@ -288,38 +351,51 @@ def upload():
         if not price:    errors.append("Price is required.")
         if not location: errors.append("Location is required.")
 
-        image_filename = None
-        file = request.files.get("image")
-        if file and file.filename:
-            if not allowed_file(file.filename):
-                errors.append("Only PNG, JPG, JPEG, or WEBP images are allowed.")
-            else:
-                image_filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
+        # Collect all images: pre-scraped + newly uploaded
+        scraped_str = request.form.get("scraped_images", "").strip()
+        all_images  = [f for f in scraped_str.split(",") if f.strip()]
+
+        for file in request.files.getlist("images"):
+            if file and file.filename:
+                if not allowed_file(file.filename):
+                    errors.append(f'"{file.filename}" is not an allowed image type.')
+                else:
+                    fname = secure_filename(file.filename)
+                    file.save(os.path.join(app.config["UPLOAD_FOLDER"], fname))
+                    all_images.append(fname)
+
+        image_filename = all_images[0] if all_images else None
 
         if errors:
             for e in errors:
                 flash(e, "danger")
-            return render_template("upload.html", form=request.form, image_filename=image_filename)
+            return render_template("upload.html", form=request.form)
 
         db = get_db()
-        # Pull contact info from agent's current profile
         db_agent = db.execute(
             "SELECT phone, email FROM agents WHERE id = ?", (session["agent_id"],)
         ).fetchone()
-        db.execute(
+        cur = db.execute(
             """
             INSERT INTO properties
                 (title, price, location, description, image_filename,
-                 bedrooms, bathrooms, size_sqm, property_type, status, is_featured,
+                 bedrooms, bathrooms, garages, size_sqm, erf_size_sqm,
+                 property_type, status, is_featured,
                  agent_phone, agent_email, agent_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (title, price, location, description, image_filename,
-             bedrooms, bathrooms, size_sqm, property_type, status, is_featured,
+             bedrooms, bathrooms, garages, size_sqm, erf_size_sqm,
+             property_type, status, is_featured,
              db_agent["phone"] or "", db_agent["email"] or "",
              session["agent_id"]),
         )
+        prop_id = cur.lastrowid
+        for i, fname in enumerate(all_images):
+            db.execute(
+                "INSERT INTO property_images (property_id, filename, sort_order) VALUES (?,?,?)",
+                (prop_id, fname, i),
+            )
         db.commit()
         flash(f'"{title}" has been listed successfully!', "success")
         return redirect(url_for("index"))
@@ -398,11 +474,22 @@ def delete_property(prop_id):
         flash("Property not found.", "warning")
         return redirect(url_for("index"))
 
-    if prop["image_filename"]:
-        img_path = os.path.join(app.config["UPLOAD_FOLDER"], prop["image_filename"])
-        if os.path.exists(img_path):
-            os.remove(img_path)
+    # Delete all gallery images from disk
+    gallery_rows = db.execute(
+        "SELECT filename FROM property_images WHERE property_id = ?", (prop_id,)
+    ).fetchall()
+    deleted = set()
+    for row in gallery_rows:
+        fpath = os.path.join(app.config["UPLOAD_FOLDER"], row["filename"])
+        if row["filename"] not in deleted and os.path.exists(fpath):
+            os.remove(fpath)
+            deleted.add(row["filename"])
+    if prop["image_filename"] and prop["image_filename"] not in deleted:
+        fpath = os.path.join(app.config["UPLOAD_FOLDER"], prop["image_filename"])
+        if os.path.exists(fpath):
+            os.remove(fpath)
 
+    db.execute("DELETE FROM property_images WHERE property_id = ?", (prop_id,))
     db.execute("DELETE FROM properties WHERE id = ?", (prop_id,))
     db.commit()
     flash(f'"{prop["title"]}" has been deleted.', "success")
@@ -588,6 +675,492 @@ def admin_delete_agent(target_id):
     db.commit()
     flash(f'Agent "{agent["username"]}" removed. Their listings remain active.', "success")
     return redirect(url_for("admin_agents"))
+
+
+@app.route("/cma", methods=["GET", "POST"])
+@login_required
+def cma():
+    if request.method == "GET":
+        return render_template("CMA.html", form={})
+
+    import tempfile, math
+    from datetime import datetime
+    from fpdf import FPDF
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    f = request.form
+    errors = []
+
+    def get(key, label):
+        v = f.get(key, "").strip()
+        if not v:
+            errors.append(f"{label} is required.")
+        return v
+
+    client_name    = get("client_name",    "Client Surname")
+    address        = get("address",        "Property Address")
+    inflation_rate = get("inflation_rate", "Inflation Rate")
+    repo_rate      = get("repo_rate",      "Repo Rate")
+    subj_date      = get("subj_date",      "Subject: Date Last Sold")
+    subj_price     = get("subj_price",     "Subject: Price Last Sold")
+
+    comps = []
+    for i in range(1, 4):
+        cd = get(f"c{i}_date",  f"Comp {i}: Date Sold")
+        cp = get(f"c{i}_price", f"Comp {i}: Price Sold")
+        comps.append((cd, cp))
+
+    if errors:
+        for e in errors:
+            flash(e, "danger")
+        return render_template("CMA.html", form=f)
+
+    try:
+        inflation_rate = float(inflation_rate)
+        repo_rate      = float(repo_rate)
+        subj_price     = float(subj_price.replace(" ", "").replace(",", "").replace("R", ""))
+        comps          = [(cd, float(cp.replace(" ", "").replace(",", "").replace("R", ""))) for cd, cp in comps]
+    except ValueError:
+        flash("All rate and price fields must be valid numbers.", "danger")
+        return render_template("CMA.html", form=f)
+
+    today = datetime.now()
+
+    def years_since(date_str):
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return (today - dt).days / 365.25
+
+    def tvm(price, rate, years):
+        return price * ((1 + rate / 100) ** years)
+
+    subj_years = years_since(subj_date)
+    adj_subject = tvm(subj_price, inflation_rate, subj_years)
+
+    adj_comps = []
+    for cd, cp in comps:
+        adj_comps.append(tvm(cp, inflation_rate, years_since(cd)))
+
+    avg_comps          = sum(adj_comps) / len(adj_comps)
+    blended_value      = adj_subject * 0.4 + avg_comps * 0.6
+    estimated_equity   = blended_value - subj_price
+    date_str           = today.strftime("%d %B %Y")
+
+    def fmt(n):
+        return f"R {n:,.0f}".replace(",", " ")
+
+    def safe(text):
+        """Replace common Unicode chars with latin-1 equivalents for FPDF."""
+        replacements = {
+            "\u2014": "-",   # em dash
+            "\u2013": "-",   # en dash
+            "\u2018": "'",   # left single quote
+            "\u2019": "'",   # right single quote
+            "\u201c": '"',   # left double quote
+            "\u201d": '"',   # right double quote
+            "\u202f": " ",   # narrow no-break space
+            "\u00a0": " ",   # no-break space
+            "\u2192": "->",  # right arrow
+        }
+        for src, dst in replacements.items():
+            text = text.replace(src, dst)
+        return text.encode("latin-1", errors="replace").decode("latin-1")
+
+    # ── Chart ──────────────────────────────────────────────────────────────
+    NAVY_HEX   = "#1b2656"
+    ORANGE_HEX = "#f15b22"
+    MUSTARD_HEX = "#f7911d"
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    labels = ["Original\nPurchase", "Market Comps\n(Avg Adjusted)", "Blended\nValuation"]
+    values = [subj_price, avg_comps, blended_value]
+    colors = [NAVY_HEX, MUSTARD_HEX, ORANGE_HEX]
+    bars = ax.bar(labels, values, color=colors, width=0.55)
+    ax.set_title("Property Value Growth Trajectory", color=NAVY_HEX, fontweight="bold", fontsize=13)
+    ax.set_ylabel("Value (ZAR)", color="#333")
+    ax.grid(axis="y", linestyle="--", alpha=0.4)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    for bar in bars:
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + h * 0.02,
+                f"R{h/1_000_000:.2f}m", ha="center", va="bottom",
+                fontweight="bold", color=NAVY_HEX, fontsize=9)
+    fig.tight_layout()
+
+    tmp_dir   = tempfile.mkdtemp()
+    chart_path = os.path.join(tmp_dir, "chart.png")
+    fig.savefig(chart_path, dpi=180, transparent=True)
+    plt.close(fig)
+
+    # ── PDF ────────────────────────────────────────────────────────────────
+    NAVY        = (27, 38, 86)
+    ORANGE      = (241, 91, 34)
+    MUSTARD_RGB = (247, 145, 29)
+    LIGHT_TEXT  = (51, 51, 51)
+    LIGHT_BG    = (245, 245, 245)
+
+    class CmaPDF(FPDF):
+        def header(self):
+            self.set_font("Helvetica", "B", 20)
+            self.set_text_color(*NAVY)
+            self.cell(0, 10, "LARNEY PROPERTIES", new_x="LMARGIN", new_y="NEXT", align="C")
+            self.set_font("Helvetica", "I", 11)
+            self.set_text_color(*MUSTARD_RGB)
+            self.cell(0, 6, "Home Price Estimation & Equity Analysis",
+                      new_x="LMARGIN", new_y="NEXT", align="C")
+            self.set_draw_color(*ORANGE)
+            self.set_line_width(1.0)
+            self.line(10, 30, 200, 30)
+            self.ln(12)
+
+        def footer(self):
+            self.set_y(-25)
+            self.set_draw_color(*NAVY)
+            self.set_line_width(0.4)
+            self.line(10, 270, 200, 270)
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(150, 150, 150)
+            self.cell(0, 10, "Prepared by Larney Properties - Let's review these metrics over coffee",
+                      align="C")
+
+    def section_header(pdf, title):
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_fill_color(*NAVY)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(0, 9, f"  {title}", new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.ln(3)
+
+    pdf = CmaPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    section_header(pdf, "1. BASELINE METRICS & MACRO INDICATORS")
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(*LIGHT_TEXT)
+    pdf.cell(100, 6, safe(f"Property: {address}"))
+    pdf.cell(90, 6, safe(f"Analysis Date: {date_str}"), align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(100, 6, safe(f"Client: {client_name}"))
+    pdf.cell(90, 6, safe(f"Inflation: {inflation_rate}%  |  Repo Rate: {repo_rate}%"),
+             align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+
+    cur_y = pdf.get_y()
+    pdf.image(chart_path, x=22, y=cur_y, w=165)
+    pdf.set_y(cur_y + 88)
+    pdf.ln(5)
+
+    section_header(pdf, "2. MARKET TRIANGULATION (COMP-ADJUSTED)")
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(*LIGHT_TEXT)
+    pdf.set_fill_color(*LIGHT_BG)
+    for i, ((cd, cp), adj) in enumerate(zip(comps, adj_comps), 1):
+        pdf.cell(0, 8, safe(f"  Comp {i}: Sold {cd} for {fmt(cp)}  ->  Adjusted: {fmt(adj)}"),
+                 new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.ln(1)
+    pdf.ln(8)
+
+    # Final valuation box
+    box_y = pdf.get_y()
+    pdf.set_fill_color(*LIGHT_BG)
+    pdf.rect(10, box_y, 190, 46, "F")
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*NAVY)
+    pdf.cell(0, 8, "FINAL CALCULATED MARKET VALUE", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(*ORANGE)
+    pdf.cell(0, 12, safe(fmt(blended_value)), new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(*MUSTARD_RGB)
+    pdf.cell(0, 8, safe(f"Estimated Accrued Equity: {fmt(estimated_equity)}"),
+             new_x="LMARGIN", new_y="NEXT", align="C")
+
+    pdf_path = os.path.join(tmp_dir, f"Valuation_{client_name.replace(' ', '_')}.pdf")
+    pdf.output(pdf_path)
+    os.remove(chart_path)
+
+    from flask import send_file
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=f"Larney_Valuation_{client_name.replace(' ', '_')}.pdf",
+        mimetype="application/pdf",
+    )
+
+
+@app.route("/api/scrape", methods=["POST"])
+@login_required
+def scrape_listing():
+    """Fetch a Property24 URL, parse it, save the image, return JSON."""
+    import time, uuid
+    from playwright.sync_api import sync_playwright
+    from bs4 import BeautifulSoup
+
+    body = request.get_json() or {}
+    url  = body.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
+    try:
+        # ── Fetch page with a real browser ────────────────────────────────
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            ctx     = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
+                viewport={"width": 1280, "height": 800},
+            )
+            page = ctx.new_page()
+            page.goto(url, wait_until="networkidle", timeout=30000)
+            time.sleep(2)
+            html = page.content()
+            browser.close()
+
+        soup   = BeautifulSoup(html, "html.parser")
+        result = {}
+
+        # Title
+        h1 = soup.find("h1")
+        result["title"] = h1.get_text(strip=True) if h1 else ""
+
+        # Price — strip to digits only
+        price_div = soup.find("div", class_="p24_price")
+        if price_div:
+            result["price"] = re.sub(r"[^\d]", "", price_div.get_text())
+
+        # Location
+        addr = soup.find("address", class_="p24_address")
+        result["location"] = addr.get_text(strip=True) if addr else ""
+
+        # Bedrooms / Bathrooms
+        for attr_title, key in [("Bedrooms", "bedrooms"), ("Bathrooms", "bathrooms")]:
+            li = soup.find("li", attrs={"title": attr_title})
+            if li:
+                span = li.find("span")
+                result[key] = re.sub(r"[^\d]", "", span.get_text()) if span else "0"
+
+        # Floor size (m²) — prefer "Floor Size" row, fallback to erf
+        size = "0"
+        for kd in soup.find_all("div", class_="p24_propertyOverviewKey"):
+            if "Floor Size" in kd.get_text():
+                rd = kd.find_next_sibling("div", class_="p24_propertyOverviewResult")
+                if rd:
+                    info = rd.find("div", class_="p24_info")
+                    if info:
+                        size = re.sub(r"[^\d]", "", info.get_text().split("m")[0]) or "0"
+                break
+        if size == "0":
+            li_sz = soup.find("li", class_="p24_size")
+            if li_sz:
+                sp = li_sz.find("span")
+                if sp:
+                    size = re.sub(r"[^\d\s]", "", sp.get_text().split("m")[0]).replace(" ", "") or "0"
+        result["size_sqm"] = size
+
+        # Property type
+        prop_type = "House"
+        for kd in soup.find_all("div", class_="p24_propertyOverviewKey"):
+            if "Type of Property" in kd.get_text():
+                rd = kd.find_next_sibling("div", class_="p24_propertyOverviewResult")
+                if rd:
+                    info = rd.find("div", class_="p24_info")
+                    if info:
+                        prop_type = info.get_text(strip=True)
+                break
+        result["property_type"] = prop_type
+
+        # Garages
+        garage_li = soup.find("li", attrs={"title": "Garages"})
+        if garage_li:
+            sp = garage_li.find("span")
+            result["garages"] = re.sub(r"[^\d]", "", sp.get_text()) if sp else "0"
+
+        # Erf size
+        erf_size = "0"
+        for kd in soup.find_all("div", class_="p24_propertyOverviewKey"):
+            if "Erf Size" in kd.get_text():
+                rd = kd.find_next_sibling("div", class_="p24_propertyOverviewResult")
+                if rd:
+                    info = rd.find("div", class_="p24_info")
+                    if info:
+                        erf_size = re.sub(r"[^\d]", "", info.get_text().split("m")[0]) or "0"
+                break
+        result["erf_size_sqm"] = erf_size
+
+        # Rates & levies — collect for description appendix
+        extras = {}
+        for label in ["Rates and Taxes", "Levy"]:
+            for kd in soup.find_all("div", class_="p24_propertyOverviewKey"):
+                if label in kd.get_text():
+                    rd = kd.find_next_sibling("div", class_="p24_propertyOverviewResult")
+                    if rd:
+                        info = rd.find("div", class_="p24_info")
+                        if info:
+                            extras[label] = info.get_text(strip=True)
+                    break
+
+        # Status from URL path
+        result["status"] = "To Let" if ("/to-let/" in url or "/to-rent/" in url) else "For Sale"
+
+        # Description + features list
+        about = soup.find("section", class_="p24_listingAbout")
+        desc_parts = []
+        if about:
+            paras = [p.get_text(strip=True) for p in about.find_all("p") if p.get_text(strip=True)]
+            desc_parts.extend(paras)
+
+        # Feature tags (pool, garden, pet friendly etc.)
+        features = []
+        for tag in soup.find_all("div", class_="p24_featureTagItem"):
+            txt = tag.get_text(strip=True)
+            if txt:
+                features.append(txt)
+        if not features:
+            for li in soup.find_all("li", class_="p24_featureItem"):
+                txt = li.get_text(strip=True)
+                if txt:
+                    features.append(txt)
+        if features:
+            desc_parts.append("Features: " + " • ".join(features))
+        if extras:
+            for k, v in extras.items():
+                desc_parts.append(f"{k}: {v}")
+
+        result["description"] = "\n\n".join(desc_parts)
+
+        # Download all gallery images (up to 10)
+        img_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.property24.com/",
+        }
+        saved_images = []
+        gallery_divs = soup.find_all("div", class_="p24_galleryImageHolder")
+        for gdiv in gallery_divs[:10]:
+            raw_url   = gdiv.get("data-image-url") or ""
+            image_url = re.sub(r"/(Ensure|Crop)\w+$", "", raw_url) if raw_url else raw_url
+            if not image_url:
+                continue
+            try:
+                img_resp = requests.get(image_url, headers=img_headers, timeout=20)
+                if img_resp.status_code == 200:
+                    ct  = img_resp.headers.get("content-type", "")
+                    ext = "webp" if "webp" in ct else ("png" if "png" in ct else "jpg")
+                    filename  = f"scraped_{uuid.uuid4().hex[:10]}.{ext}"
+                    save_path = os.path.join(UPLOAD_FOLDER, filename)
+                    with open(save_path, "wb") as fh:
+                        fh.write(img_resp.content)
+                    saved_images.append(filename)
+            except Exception:
+                pass
+
+        if saved_images:
+            result["scraped_images"] = ",".join(saved_images)
+            result["scraped_image"]  = saved_images[0]
+            result["image_preview"]  = url_for("static", filename=f"uploads/{saved_images[0]}")
+            result["image_previews"] = [
+                url_for("static", filename=f"uploads/{f}") for f in saved_images
+            ]
+
+        return jsonify(result)
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/sell", methods=["GET", "POST"])
+def sell():
+    if request.method == "POST":
+        full_name        = request.form.get("full_name",        "").strip()
+        email            = request.form.get("email",            "").strip()
+        phone            = request.form.get("phone",            "").strip()
+        contact_time     = request.form.get("contact_time",     "").strip()
+        address          = request.form.get("address",          "").strip()
+        suburb           = request.form.get("suburb",           "").strip()
+        city             = request.form.get("city",             "").strip()
+        property_type    = request.form.get("property_type",    "House")
+        bedrooms         = request.form.get("bedrooms",         0)
+        bathrooms        = request.form.get("bathrooms",        0)
+        garages          = request.form.get("garages",          0)
+        size_sqm         = request.form.get("size_sqm",         0)
+        erf_size_sqm     = request.form.get("erf_size_sqm",     0)
+        asking_price     = request.form.get("asking_price",     "").strip()
+        occupied         = request.form.get("occupied",         "").strip()
+        bond_outstanding = request.form.get("bond_outstanding", "").strip()
+        notes            = request.form.get("notes",            "").strip()
+        heard_from       = request.form.get("heard_from",       "").strip()
+
+        errors = []
+        if not full_name: errors.append("Full name is required.")
+        if not email:     errors.append("Email address is required.")
+        if not phone:     errors.append("Phone number is required.")
+        if not address:   errors.append("Property address is required.")
+
+        if errors:
+            for e in errors:
+                flash(e, "danger")
+            return render_template("sell.html", form=request.form)
+
+        from datetime import datetime, timezone, timedelta
+        sast = datetime.now(timezone(timedelta(hours=2))).strftime("%Y-%m-%d %H:%M:%S")
+        db = get_db()
+        db.execute("""
+            INSERT INTO seller_leads
+                (full_name, email, phone, contact_time, address, suburb, city,
+                 property_type, bedrooms, bathrooms, garages, size_sqm, erf_size_sqm,
+                 asking_price, occupied, bond_outstanding, notes, heard_from, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (full_name, email, phone, contact_time, address, suburb, city,
+              property_type, bedrooms, bathrooms, garages, size_sqm, erf_size_sqm,
+              asking_price, occupied, bond_outstanding, notes, heard_from, sast))
+        db.commit()
+        flash("Thank you! We will be in touch with you shortly.", "success")
+        return redirect(url_for("sell"))
+
+    return render_template("sell.html", form={})
+
+
+@app.route("/admin/leads")
+@admin_required
+def admin_leads():
+    db    = get_db()
+    leads = db.execute(
+        "SELECT * FROM seller_leads ORDER BY created_at DESC"
+    ).fetchall()
+    return render_template("admin_leads.html", leads=leads)
+
+
+@app.route("/admin/leads/<int:lead_id>/status", methods=["POST"])
+@admin_required
+def admin_lead_status(lead_id):
+    status = request.form.get("status", "New")
+    db = get_db()
+    db.execute("UPDATE seller_leads SET status = ? WHERE id = ?", (status, lead_id))
+    db.commit()
+    return redirect(url_for("admin_leads"))
+
+
+@app.route("/agents")
+def agents_page():
+    db = get_db()
+    agents_list = db.execute(
+        "SELECT id, full_name, bio, phone, email, profile_image FROM agents ORDER BY full_name"
+    ).fetchall()
+    return render_template("agents.html", agents=agents_list)
+
+
+@app.route("/popia")
+def popia():
+    return render_template("popia.html")
+
+
+@app.route("/paipa")
+def paipa():
+    return render_template("paipa.html")
 
 
 @app.route("/login", methods=["GET", "POST"])

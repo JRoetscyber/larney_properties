@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Our Agents – Larney Properties{% endblock %}
+
+{% block content %}
+<section class="py-5">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="text-center mb-5">
+      <p class="text-uppercase fw-bold small mb-1" style="color:var(--lp-orange); letter-spacing:1.5px;">
+        Meet the Team
+      </p>
+      <h1 class="fw-bold mb-2" style="color:var(--lp-navy);">Our Agents</h1>
+      <p class="text-muted mx-auto" style="max-width:520px;">
+        Get to know the dedicated professionals behind Larney Properties — ready to guide you every step of the way.
+      </p>
+    </div>
+
+    {% if agents %}
+    <div class="row g-4 justify-content-center">
+      {% for agent in agents %}
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm lp-agent-card text-center p-4">
+
+          <!-- Photo -->
+          {% if agent['profile_image'] %}
+            <img src="{{ url_for('static', filename='uploads/agents/' ~ agent['profile_image']) }}"
+                 alt="{{ agent['full_name'] or 'Agent' }}"
+                 class="rounded-circle mx-auto mb-3"
+                 style="width:110px;height:110px;object-fit:cover;border:3px solid var(--lp-orange);box-shadow:0 4px 16px rgba(241,91,34,0.18);">
+          {% else %}
+            <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                 style="width:110px;height:110px;background:linear-gradient(135deg,var(--lp-navy),var(--lp-orange));flex-shrink:0;">
+              <i class="bi bi-person-fill text-white" style="font-size:2.5rem;"></i>
+            </div>
+          {% endif %}
+
+          <!-- Name -->
+          <h5 class="fw-bold mb-1" style="color:var(--lp-navy);">
+            {{ agent['full_name'] or 'Larney Agent' }}
+          </h5>
+          <span class="badge mb-3" style="background:rgba(241,91,34,0.12);color:var(--lp-orange);font-size:0.75rem;">
+            <i class="bi bi-person-badge-fill me-1"></i>Property Agent
+          </span>
+
+          <!-- Bio -->
+          {% if agent['bio'] %}
+          <p class="text-muted small mb-4" style="line-height:1.6;">
+            {{ agent['bio'][:180] }}{% if agent['bio']|length > 180 %}…{% endif %}
+          </p>
+          {% else %}
+          <p class="text-muted small mb-4 fst-italic">No bio available yet.</p>
+          {% endif %}
+
+          <!-- Contact -->
+          <div class="mt-auto d-flex flex-column gap-2">
+            {% if agent['phone'] %}
+            <a href="tel:{{ agent['phone'] }}"
+               class="btn btn-sm lp-btn-outline-navy d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-telephone-fill"></i>{{ agent['phone'] }}
+            </a>
+            {% endif %}
+            {% if agent['email'] %}
+            <a href="mailto:{{ agent['email'] }}"
+               class="btn btn-sm lp-btn-primary d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-envelope-fill"></i>{{ agent['email'] }}
+            </a>
+            {% endif %}
+            {% if agent['phone'] %}
+            <a href="https://wa.me/{{ agent['phone'] | replace(' ','') | replace('+','') | replace('0','27',1) }}"
+               target="_blank" rel="noopener"
+               class="btn btn-sm lp-btn-whatsapp d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-whatsapp"></i>WhatsApp
+            </a>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-people" style="font-size:3rem;color:var(--lp-orange);opacity:0.4;"></i>
+      <p class="text-muted mt-3">No agents listed yet.</p>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

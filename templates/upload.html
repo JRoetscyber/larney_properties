@@ -30,6 +30,27 @@
           <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
           <div class="card-body p-4 p-md-5">
 
+            <!-- ── Property24 URL importer ────────────────────────────────── -->
+            <div class="p-4 rounded-3 mb-5"
+                 style="background:linear-gradient(135deg,var(--lp-navy) 0%,#2c3e7a 100%);">
+              <p class="text-white fw-bold mb-1">
+                <i class="bi bi-magic me-2" style="color:var(--lp-orange);"></i>Import from Property24
+              </p>
+              <p class="small mb-3" style="color:rgba(255,255,255,0.65);">
+                Paste your Property24 listing URL and we'll fill the form automatically.
+              </p>
+              <div class="input-group">
+                <input type="url" id="scrapeUrl" class="form-control"
+                       placeholder="https://www.property24.com/for-sale/…"
+                       autocomplete="off" />
+                <button type="button" id="scrapeBtn" class="btn px-4 fw-semibold"
+                        style="background:var(--lp-orange);color:#fff;white-space:nowrap;">
+                  <i class="bi bi-download me-1"></i>Fill Form
+                </button>
+              </div>
+              <div id="scrapeStatus" class="mt-2 small" style="color:rgba(255,255,255,0.75);min-height:1.2rem;"></div>
+            </div>
+
             <p class="text-muted mb-4 small">
               Complete all sections below to create the listing.
               Fields marked <span class="text-danger">*</span> are required.
@@ -37,6 +58,8 @@
 
             <form method="POST" action="{{ url_for('upload') }}"
                   enctype="multipart/form-data" novalidate>
+              <!-- Hidden: comma-separated pre-downloaded scraped image filenames -->
+              <input type="hidden" id="scraped_images" name="scraped_images" value="" />
 
               <!-- ── BASIC INFO ──────────────────────────────────────────── -->
               <h6 class="fw-bold text-uppercase mb-3 small"
@@ -138,28 +161,42 @@
                 </div>
               </div>
 
-              <!-- Beds / Baths / Size -->
+              <!-- Beds / Baths / Garages / Size -->
               <div class="row g-4 mb-4">
-                <div class="col-12 col-sm-4">
+                <div class="col-6 col-sm-3">
                   <label for="bedrooms" class="form-label fw-semibold">
                     <i class="bi bi-door-open-fill lp-icon-accent me-1"></i>Bedrooms
                   </label>
                   <input type="number" id="bedrooms" name="bedrooms" class="form-control"
                          min="0" max="20" value="{{ form.get('bedrooms','0') }}" placeholder="0" />
                 </div>
-                <div class="col-12 col-sm-4">
+                <div class="col-6 col-sm-3">
                   <label for="bathrooms" class="form-label fw-semibold">
                     <i class="bi bi-droplet-fill lp-icon-accent me-1"></i>Bathrooms
                   </label>
                   <input type="number" id="bathrooms" name="bathrooms" class="form-control"
                          min="0" max="20" value="{{ form.get('bathrooms','0') }}" placeholder="0" />
                 </div>
-                <div class="col-12 col-sm-4">
+                <div class="col-6 col-sm-3">
+                  <label for="garages" class="form-label fw-semibold">
+                    <i class="bi bi-car-front-fill lp-icon-accent me-1"></i>Garages
+                  </label>
+                  <input type="number" id="garages" name="garages" class="form-control"
+                         min="0" max="10" value="{{ form.get('garages','0') }}" placeholder="0" />
+                </div>
+                <div class="col-6 col-sm-3">
                   <label for="size_sqm" class="form-label fw-semibold">
                     <i class="bi bi-arrows-fullscreen lp-icon-accent me-1"></i>Floor Area (m²)
                   </label>
                   <input type="number" id="size_sqm" name="size_sqm" class="form-control"
                          min="0" value="{{ form.get('size_sqm','0') }}" placeholder="0" />
+                </div>
+                <div class="col-6 col-sm-3">
+                  <label for="erf_size_sqm" class="form-label fw-semibold">
+                    <i class="bi bi-crop lp-icon-accent me-1"></i>Erf Size (m²)
+                  </label>
+                  <input type="number" id="erf_size_sqm" name="erf_size_sqm" class="form-control"
+                         min="0" value="{{ form.get('erf_size_sqm','0') }}" placeholder="0" />
                 </div>
               </div>
 
@@ -181,7 +218,7 @@
               <!-- ── IMAGE UPLOAD ────────────────────────────────────────── -->
               <h6 class="fw-bold text-uppercase mb-3 small mt-4"
                   style="color:var(--lp-orange);letter-spacing:1.2px;">
-                <i class="bi bi-image-fill me-1"></i>Property Image
+                <i class="bi bi-images me-1"></i>Property Images
               </h6>
 
               <div class="mb-4">
@@ -190,25 +227,16 @@
                      style="border-style:dashed!important;border-color:#ced4da;cursor:pointer;transition:all 0.2s;">
                   <i class="bi bi-cloud-arrow-up fs-2 d-block mb-2" style="color:var(--lp-orange);"></i>
                   <p class="mb-1 fw-semibold text-muted">Click to select or drag &amp; drop</p>
-                  <p class="small text-muted mb-3">PNG, JPG, JPEG, WEBP — max 8 MB</p>
-                  <input type="file" id="image" name="image"
-                         accept=".png,.jpg,.jpeg,.webp" class="d-none" />
+                  <p class="small text-muted mb-3">PNG, JPG, JPEG, WEBP — max 8 MB each — multiple allowed</p>
+                  <input type="file" id="imageInput" name="images"
+                         accept=".png,.jpg,.jpeg,.webp" class="d-none" multiple />
                   <button type="button" class="btn lp-btn-outline btn-sm" id="browseBtn">
                     <i class="bi bi-folder2-open me-1"></i>Browse Files
                   </button>
                 </div>
 
-                <div id="previewWrap" class="mt-3 d-none text-center">
-                  <img id="imagePreview" src="#" alt="Preview"
-                       class="lp-edit-preview rounded-3 mb-2 shadow-sm" />
-                  <div>
-                    <span id="fileName" class="small text-muted me-3"></span>
-                    <button type="button" class="btn btn-link btn-sm text-danger p-0"
-                            id="clearImage">
-                      <i class="bi bi-x-circle me-1"></i>Remove
-                    </button>
-                  </div>
-                </div>
+                <!-- Image preview grid -->
+                <div id="previewGrid" class="mt-3 d-flex flex-wrap gap-2"></div>
               </div>
 
               <!-- ── AGENT DETAILS (from profile) ──────────────────── -->
@@ -303,32 +331,137 @@
   desc.addEventListener('input', updateCount);
   updateCount();
 
-  // Image drop-zone
-  const fileInput   = document.getElementById('image');
-  const browseBtn   = document.getElementById('browseBtn');
-  const dropZone    = document.getElementById('dropZone');
-  const previewWrap = document.getElementById('previewWrap');
-  const previewImg  = document.getElementById('imagePreview');
-  const fileNameEl  = document.getElementById('fileName');
-  const clearBtn    = document.getElementById('clearImage');
+  // ── Property24 importer ──────────────────────────────────────────────
+  const scrapeBtn    = document.getElementById('scrapeBtn');
+  const scrapeUrl    = document.getElementById('scrapeUrl');
+  const scrapeStatus = document.getElementById('scrapeStatus');
+
+  scrapeBtn.addEventListener('click', async function () {
+    const url = scrapeUrl.value.trim();
+    if (!url) { scrapeStatus.textContent = 'Please enter a URL first.'; return; }
+
+    scrapeBtn.disabled = true;
+    scrapeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Importing…';
+    scrapeStatus.textContent = 'Fetching listing — this may take 15–30 seconds…';
+
+    try {
+      const resp = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await resp.json();
+
+      if (data.error) {
+        scrapeStatus.textContent = 'Error: ' + data.error;
+        return;
+      }
+
+      // Fill in the form fields
+      if (data.title)        document.getElementById('title').value        = data.title;
+      if (data.location)     document.getElementById('location').value     = data.location;
+      if (data.bedrooms)     document.getElementById('bedrooms').value     = data.bedrooms;
+      if (data.bathrooms)    document.getElementById('bathrooms').value    = data.bathrooms;
+      if (data.garages)      document.getElementById('garages').value      = data.garages;
+      if (data.size_sqm)     document.getElementById('size_sqm').value     = data.size_sqm;
+      if (data.erf_size_sqm) document.getElementById('erf_size_sqm').value = data.erf_size_sqm;
+      if (data.description)  document.getElementById('description').value  = data.description;
+
+      // Price — format with spaces
+      if (data.price) {
+        const digits = data.price.replace(/\D/g, '');
+        document.getElementById('price').value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      }
+
+      // Property type dropdown
+      if (data.property_type) {
+        const sel = document.getElementById('property_type');
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value.toLowerCase() === data.property_type.toLowerCase()) {
+            sel.selectedIndex = i; break;
+          }
+        }
+      }
+
+      // Status radio
+      if (data.status === 'To Let') {
+        document.getElementById('statusLet').checked  = true;
+      } else {
+        document.getElementById('statusSale').checked = true;
+      }
+
+      // Scraped image preview
+      if (data.scraped_images) {
+        document.getElementById('scraped_images').value = data.scraped_images;
+        const grid = document.getElementById('previewGrid');
+        grid.innerHTML = '';
+        (data.image_previews || [data.image_preview]).forEach((src, i) => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'position:relative;width:100px;height:100px;';
+          const img = document.createElement('img');
+          img.src = src;
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;border:2px solid ' + (i===0?'var(--lp-orange)':'#dee2e6');
+          img.title = i === 0 ? 'Main photo' : 'Photo ' + (i+1);
+          wrap.appendChild(img);
+          if (i === 0) {
+            const badge = document.createElement('span');
+            badge.textContent = 'Main';
+            badge.style.cssText = 'position:absolute;bottom:4px;left:4px;background:var(--lp-orange);color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:4px;font-weight:700;';
+            wrap.appendChild(badge);
+          }
+          grid.appendChild(wrap);
+        });
+        document.getElementById('dropZone').style.borderColor = 'var(--lp-orange)';
+      }
+
+      updateCount();
+      scrapeStatus.textContent = '✓ Form filled successfully — review and publish.';
+      scrapeStatus.style.color = '#90ee90';
+
+    } catch (err) {
+      scrapeStatus.textContent = 'Network error: ' + err.message;
+    } finally {
+      scrapeBtn.disabled = false;
+      scrapeBtn.innerHTML = '<i class="bi bi-download me-1"></i>Fill Form';
+    }
+  });
+
+  // ── Image drop-zone (multi-image) ────────────────────────────────────
+  const fileInput = document.getElementById('imageInput');
+  const browseBtn = document.getElementById('browseBtn');
+  const dropZone  = document.getElementById('dropZone');
+  const grid      = document.getElementById('previewGrid');
 
   browseBtn.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('click', e => { if (e.target !== browseBtn) fileInput.click(); });
 
-  function showPreview(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      previewImg.src         = e.target.result;
-      fileNameEl.textContent = file.name;
-      previewWrap.classList.remove('d-none');
-      dropZone.style.borderColor = 'var(--lp-orange)';
-      dropZone.style.background  = 'rgba(241,91,34,0.04)';
-    };
-    reader.readAsDataURL(file);
+  function renderPreviews(files) {
+    grid.innerHTML = '';
+    Array.from(files).forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;width:100px;height:100px;';
+        const img = document.createElement('img');
+        img.src = ev.target.result;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;border:2px solid ' + (i===0?'var(--lp-orange)':'#dee2e6');
+        img.title = i === 0 ? 'Main photo' : 'Photo ' + (i+1);
+        wrap.appendChild(img);
+        if (i === 0) {
+          const badge = document.createElement('span');
+          badge.textContent = 'Main';
+          badge.style.cssText = 'position:absolute;bottom:4px;left:4px;background:var(--lp-orange);color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:4px;font-weight:700;';
+          wrap.appendChild(badge);
+        }
+        grid.appendChild(wrap);
+      };
+      reader.readAsDataURL(file);
+    });
+    dropZone.style.borderColor = files.length ? 'var(--lp-orange)' : '#ced4da';
+    dropZone.style.background  = files.length ? 'rgba(241,91,34,0.04)' : '';
   }
 
-  fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+  fileInput.addEventListener('change', () => renderPreviews(fileInput.files));
 
   dropZone.addEventListener('dragover', e => {
     e.preventDefault();
@@ -336,21 +469,14 @@
     dropZone.style.background  = 'rgba(241,91,34,0.04)';
   });
   dropZone.addEventListener('dragleave', () => {
-    if (!fileInput.files.length) {
-      dropZone.style.borderColor = '#ced4da';
-      dropZone.style.background  = '';
-    }
+    if (!fileInput.files.length) { dropZone.style.borderColor = '#ced4da'; dropZone.style.background = ''; }
   });
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; showPreview(file); }
-  });
-  clearBtn.addEventListener('click', () => {
-    fileInput.value = '';
-    previewWrap.classList.add('d-none');
-    dropZone.style.borderColor = '#ced4da';
-    dropZone.style.background  = '';
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+    renderPreviews(dt.files);
   });
 </script>
 {% endblock %}

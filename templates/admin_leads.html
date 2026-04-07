@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Seller Leads – Larney Properties{% endblock %}
+
+{% block content %}
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Seller Leads</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-envelope-fill me-2" style="color:var(--lp-orange);"></i>Seller Leads
+    </h1>
+    <p class="text-white-50 small mt-1 mb-0">
+      {{ leads|length }} enquir{{ 'y' if leads|length == 1 else 'ies' }} received
+    </p>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+
+    {% if not leads %}
+    <div class="card border-0 shadow-sm text-center py-5" style="border-radius:var(--lp-radius);">
+      <div class="card-body">
+        <i class="bi bi-inbox fs-1 opacity-25 d-block mb-3" style="color:var(--lp-navy);"></i>
+        <p class="fw-semibold mb-1" style="color:var(--lp-navy);">No leads yet.</p>
+        <p class="small text-muted mb-0">Seller enquiries submitted via the public form will appear here.</p>
+      </div>
+    </div>
+    {% else %}
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+      {% set new_count = leads | selectattr('status', 'equalto', 'New') | list | length %}
+      {% set contacted_count = leads | selectattr('status', 'equalto', 'Contacted') | list | length %}
+      {% set closed_count = leads | selectattr('status', 'equalto', 'Closed') | list | length %}
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3" style="border-radius:var(--lp-radius);">
+          <div class="fw-bold fs-4" style="color:var(--lp-orange);">{{ leads|length }}</div>
+          <div class="small text-muted">Total</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3" style="border-radius:var(--lp-radius);">
+          <div class="fw-bold fs-4" style="color:var(--lp-navy);">{{ new_count }}</div>
+          <div class="small text-muted">New</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3" style="border-radius:var(--lp-radius);">
+          <div class="fw-bold fs-4" style="color:#0d6efd;">{{ contacted_count }}</div>
+          <div class="small text-muted">Contacted</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3" style="border-radius:var(--lp-radius);">
+          <div class="fw-bold fs-4" style="color:#198754;">{{ closed_count }}</div>
+          <div class="small text-muted">Closed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead cards -->
+    {% for lead in leads %}
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:var(--lp-radius);overflow:hidden;"
+         id="lead-{{ lead['id'] }}">
+      <div style="height:4px;background:{% if lead['status'] == 'New' %}linear-gradient(90deg,var(--lp-orange),var(--lp-mustard)){% elif lead['status'] == 'Contacted' %}linear-gradient(90deg,#0d6efd,#6ea8fe){% else %}linear-gradient(90deg,#198754,#75b798){% endif %};"></div>
+      <div class="card-body p-4">
+
+        <div class="row g-3">
+
+          <!-- Left: contact info -->
+          <div class="col-12 col-md-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div style="width:44px;height:44px;background:rgba(241,91,34,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-fill" style="color:var(--lp-orange);font-size:1.2rem;"></i>
+              </div>
+              <div>
+                <p class="fw-bold mb-0" style="color:var(--lp-navy);">{{ lead['full_name'] }}</p>
+                <p class="small text-muted mb-0">
+                  {{ lead['created_at'][:16].replace('T', ' ') if 'T' in lead['created_at'] else lead['created_at'][:16] }}
+                </p>
+              </div>
+            </div>
+            <p class="small mb-1">
+              <i class="bi bi-envelope-fill me-2" style="color:var(--lp-orange);"></i>
+              <a href="mailto:{{ lead['email'] }}" class="text-decoration-none" style="color:var(--lp-navy);">{{ lead['email'] }}</a>
+            </p>
+            <p class="small mb-1">
+              <i class="bi bi-telephone-fill me-2" style="color:var(--lp-orange);"></i>
+              <a href="tel:{{ lead['phone'] }}" class="text-decoration-none" style="color:var(--lp-navy);">{{ lead['phone'] }}</a>
+            </p>
+            {% if lead['contact_time'] %}
+            <p class="small mb-1">
+              <i class="bi bi-clock-fill me-2" style="color:var(--lp-orange);"></i>{{ lead['contact_time'] }}
+            </p>
+            {% endif %}
+            {% if lead['heard_from'] %}
+            <p class="small mb-0">
+              <i class="bi bi-megaphone-fill me-2" style="color:var(--lp-orange);"></i>{{ lead['heard_from'] }}
+            </p>
+            {% endif %}
+          </div>
+
+          <!-- Middle: property info -->
+          <div class="col-12 col-md-4">
+            <p class="small fw-semibold mb-2" style="color:var(--lp-navy);">
+              <i class="bi bi-house-fill me-1"></i>Property
+            </p>
+            <p class="small mb-1 fw-semibold">{{ lead['address'] }}{% if lead['suburb'] %}, {{ lead['suburb'] }}{% endif %}{% if lead['city'] %}, {{ lead['city'] }}{% endif %}</p>
+            <p class="small text-muted mb-1">{{ lead['property_type'] }}</p>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              {% if lead['bedrooms'] %}
+              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                <i class="bi bi-door-open-fill me-1"></i>{{ lead['bedrooms'] }} bed
+              </span>
+              {% endif %}
+              {% if lead['bathrooms'] %}
+              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                <i class="bi bi-droplet-fill me-1"></i>{{ lead['bathrooms'] }} bath
+              </span>
+              {% endif %}
+              {% if lead['garages'] %}
+              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                <i class="bi bi-car-front-fill me-1"></i>{{ lead['garages'] }} garage
+              </span>
+              {% endif %}
+              {% if lead['size_sqm'] %}
+              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                <i class="bi bi-arrows-fullscreen me-1"></i>{{ lead['size_sqm'] }} m²
+              </span>
+              {% endif %}
+            </div>
+            {% if lead['asking_price'] %}
+            <p class="small mb-1 fw-bold" style="color:var(--lp-orange);">
+              R {{ lead['asking_price'] }}
+            </p>
+            {% endif %}
+            {% if lead['occupied'] %}
+            <p class="small text-muted mb-1">{{ lead['occupied'] }}</p>
+            {% endif %}
+            {% if lead['bond_outstanding'] %}
+            <p class="small text-muted mb-0">Bond outstanding: {{ lead['bond_outstanding'] }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Right: status + notes -->
+          <div class="col-12 col-md-4">
+            <p class="small fw-semibold mb-2" style="color:var(--lp-navy);">
+              <i class="bi bi-flag-fill me-1"></i>Status
+            </p>
+            <form method="POST" action="{{ url_for('admin_lead_status', lead_id=lead['id']) }}"
+                  class="d-flex gap-2 mb-3">
+              <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                {% for s in ['New', 'Contacted', 'Mandated', 'Closed', 'Not Interested'] %}
+                <option value="{{ s }}" {% if lead['status'] == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            {% if lead['notes'] %}
+            <p class="small fw-semibold mb-1" style="color:var(--lp-navy);">Notes</p>
+            <p class="small text-muted mb-0" style="white-space:pre-line;">{{ lead['notes'] }}</p>
+            {% endif %}
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

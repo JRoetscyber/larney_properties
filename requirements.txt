@@ -1,2 +1,7 @@
 flask>=3.0
 werkzeug>=3.0
+requests>=2.31
+playwright>=1.44
+beautifulsoup4>=4.12
+fpdf2>=2.7
+matplotlib>=3.8

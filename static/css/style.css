@@ -36,28 +36,157 @@ main { flex: 1; }
 /* --- Navbar ------------------------------------------------- */
 .lp-navbar {
   background-color: var(--lp-navy) !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.20);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+  border-bottom: 3px solid var(--lp-orange);
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
 .lp-navbar .navbar-brand {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   letter-spacing: 0.3px;
+  transition: opacity 0.2s;
 }
+.lp-navbar .navbar-brand:hover { opacity: 0.88; }
 
 .lp-navbar .nav-link {
-  color: rgba(255,255,255,0.80) !important;
-  transition: color 0.2s;
-  font-size: 0.9rem;
+  color: rgba(255,255,255,0.78) !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.45rem 0.8rem !important;
+  border-radius: 6px;
+  position: relative;
+  transition: color 0.18s, background 0.18s;
 }
 
-.lp-navbar .nav-link:hover,
+.lp-navbar .nav-link:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.09);
+}
+
 .lp-navbar .nav-link.active {
-  color: var(--lp-mustard) !important;
+  color: #fff !important;
+  background: rgba(241,91,34,0.18);
+}
+
+/* Orange underline dot on active item (desktop only) */
+@media (min-width: 992px) {
+  .lp-navbar .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
+    background: var(--lp-orange);
+    border-radius: 2px 2px 0 0;
+  }
+}
+
+/* Dropdown polish */
+.lp-navbar .dropdown-menu {
+  border: none;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14) !important;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+
+.lp-navbar .dropdown-item {
+  font-size: 0.875rem;
+  padding: 9px 18px;
+  color: #1f2937;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lp-navbar .dropdown-item:hover {
+  background: #f3f4f6;
+  color: var(--lp-navy);
+}
+
+.lp-navbar .dropdown-item.active,
+.lp-navbar .dropdown-item:active {
+  background: rgba(241,91,34,0.09);
+  color: var(--lp-orange);
+  font-weight: 600;
 }
 
 .lp-nav-admin {
   color: var(--lp-mustard) !important;
   font-weight: 600;
+}
+
+/* Logout link in mobile nav */
+.lp-nav-danger { color: rgba(220,53,69,0.85) !important; }
+.lp-nav-danger:hover {
+  color: #dc3545 !important;
+  background: rgba(220,53,69,0.08) !important;
+}
+
+/* Better toggler button */
+.lp-navbar .navbar-toggler {
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  border-radius: 6px;
+  padding: 5px 10px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lp-navbar .navbar-toggler:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.45) !important;
+}
+.lp-navbar .navbar-toggler:focus {
+  box-shadow: 0 0 0 3px rgba(241,91,34,0.35);
+}
+
+/* ── Mobile-specific navbar styles (< lg) ─────────────────── */
+@media (max-width: 991.98px) {
+  .lp-navbar .navbar-collapse {
+    border-top: 1px solid rgba(255,255,255,0.12);
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.75rem;
+  }
+  .lp-navbar .navbar-nav { gap: 1px; }
+
+  .lp-navbar .nav-link {
+    padding: 0.6rem 0.75rem !important;
+    border-radius: 6px;
+  }
+
+  /* Admin dropdown shows inline in mobile nav (not floating absolute) */
+  .lp-navbar .navbar-nav .dropdown-menu.show {
+    position: static;
+    display: block;
+  }
+
+  /* Appearance only */
+  .lp-navbar .navbar-nav .dropdown-menu {
+    background-color: rgba(255,255,255,0.1) !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 8px !important;
+    margin-top: 2px !important;
+    margin-left: 0.75rem;
+    padding: 4px 0 !important;
+  }
+  .lp-navbar .navbar-nav .dropdown-item {
+    color: rgba(255,255,255,0.88) !important;
+    padding: 10px 16px !important;
+    font-size: 0.875rem;
+  }
+  .lp-navbar .navbar-nav .dropdown-item:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #fff !important;
+  }
+  .lp-navbar .navbar-nav .dropdown-item.active {
+    background: rgba(241,91,34,0.25) !important;
+    color: var(--lp-orange) !important;
+    font-weight: 600;
+  }
+
+  /* No underline indicator on mobile */
+  .lp-navbar .nav-link.active::after { display: none; }
 }
 
 /* --- Buttons ------------------------------------------------ */
@@ -91,6 +220,42 @@ main { flex: 1; }
   background-color: var(--lp-orange);
   color: #fff;
   transform: translateY(-2px);
+}
+
+.lp-btn-outline-navy {
+  border: 1.5px solid var(--lp-navy);
+  color: var(--lp-navy);
+  font-weight: 600;
+  background: transparent;
+  transition: background-color 0.2s, color 0.2s, transform 0.15s;
+}
+.lp-btn-outline-navy:hover {
+  background-color: var(--lp-navy);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.lp-btn-whatsapp {
+  background-color: #25d366;
+  border-color: #25d366;
+  color: #fff;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.15s;
+}
+.lp-btn-whatsapp:hover {
+  background-color: #1ebe5c;
+  border-color: #1ebe5c;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.lp-agent-card {
+  border-radius: 16px !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.lp-agent-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important;
 }
 
 .lp-btn-navy {
@@ -712,9 +877,92 @@ main { flex: 1; }
   font-weight: 500;
 }
 
+/* --- User dropdown (avatar pill menu) ---------------------- */
+.lp-user-dropdown {
+  border-radius: 12px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.16) !important;
+  border: 1px solid rgba(0,0,0,0.07) !important;
+  padding: 6px 0 !important;
+  margin-top: 8px !important;
+}
+
+.lp-dd-header { pointer-events: none; }
+
+.lp-dd-role-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-top: 3px;
+}
+.lp-dd-admin {
+  background: rgba(241,91,34,0.1);
+  color: var(--lp-orange);
+  border: 1px solid rgba(241,91,34,0.25);
+}
+.lp-dd-agent {
+  background: rgba(27,38,86,0.07);
+  color: var(--lp-navy);
+  border: 1px solid rgba(27,38,86,0.18);
+}
+
+.lp-dd-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #9ca3af;
+  padding: 4px 16px 2px;
+}
+
+.lp-dd-item {
+  font-size: 0.875rem;
+  padding: 9px 16px !important;
+  color: #1f2937 !important;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.lp-dd-item:hover {
+  background: #f3f4f6 !important;
+  color: var(--lp-navy) !important;
+}
+.lp-dd-item.active {
+  background: rgba(241,91,34,0.08) !important;
+  color: var(--lp-orange) !important;
+  font-weight: 600;
+}
+.lp-dd-danger {
+  color: #dc3545 !important;
+}
+.lp-dd-danger:hover {
+  background: rgba(220,53,69,0.06) !important;
+  color: #b91c1c !important;
+}
+
 /* --- Agent nav dropdown ------------------------------------ */
-.lp-agent-menu { color: rgba(255,255,255,0.85) !important; }
-.lp-agent-menu:hover { color: #fff !important; }
+.lp-agent-menu {
+  color: rgba(255,255,255,0.88) !important;
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 50px !important;
+  padding: 5px 16px 5px 5px !important;
+  transition: background 0.2s, border-color 0.2s !important;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+/* No Bootstrap caret needed — we use our own chevron icon */
+.lp-agent-menu:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.35) !important;
+}
+.lp-agent-menu:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(241,91,34,0.35) !important;
+}
 
 /* --- Agent avatar (profile page + cards) ------------------- */
 .lp-agent-avatar {

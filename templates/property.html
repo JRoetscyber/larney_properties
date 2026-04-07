@@ -27,13 +27,50 @@
       <!-- ── LEFT: Property info ─────────────────────────────────────────── -->
       <div class="col-12 col-lg-8">
 
-        <!-- Image -->
-        {% if prop['image_filename'] %}
-          <img src="{{ url_for('static', filename='uploads/' ~ prop['image_filename']) }}"
-               alt="{{ prop['title'] }}" class="lp-detail-img mb-4 shadow" />
+        <!-- Gallery -->
+        {% if gallery %}
+        <div class="mb-4" id="propGallery">
+          <!-- Main image -->
+          <div style="position:relative;border-radius:12px;overflow:hidden;background:#111;">
+            <img id="galMain"
+                 src="{{ url_for('static', filename='uploads/' ~ gallery[0]['filename']) }}"
+                 alt="{{ prop['title'] }}"
+                 style="width:100%;height:420px;object-fit:cover;display:block;transition:opacity 0.2s;" />
+
+            {% if gallery|length > 1 %}
+            <!-- Arrows -->
+            <button onclick="galNav(-1)" aria-label="Previous"
+                    style="position:absolute;top:50%;left:12px;transform:translateY(-50%);background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button onclick="galNav(1)" aria-label="Next"
+                    style="position:absolute;top:50%;right:12px;transform:translateY(-50%);background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+            <!-- Counter -->
+            <div style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.55);color:#fff;font-size:0.8rem;padding:3px 10px;border-radius:20px;">
+              <span id="galCurrent">1</span> / {{ gallery|length }}
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Thumbnails -->
+          {% if gallery|length > 1 %}
+          <div class="d-flex gap-2 mt-2 flex-wrap">
+            {% for img in gallery %}
+            <img src="{{ url_for('static', filename='uploads/' ~ img['filename']) }}"
+                 alt="Photo {{ loop.index }}"
+                 onclick="galJump({{ loop.index0 }})"
+                 class="gal-thumb {% if loop.first %}active{% endif %}"
+                 style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid {% if loop.first %}var(--lp-orange){% else %}transparent{% endif %};transition:border-color 0.15s;" />
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
         {% else %}
-          <div class="lp-detail-img mb-4 shadow bg-light d-flex align-items-center
-                      justify-content-center" style="height:340px; border-radius:12px;">
+          <div class="mb-4 shadow bg-light d-flex align-items-center justify-content-center"
+               style="height:340px;border-radius:12px;">
             <i class="bi bi-house-fill fs-1 opacity-25" style="color:var(--lp-navy);"></i>
           </div>
         {% endif %}
@@ -92,7 +129,7 @@
         </p>
 
         <!-- Specs strip -->
-        {% if prop['bedrooms'] or prop['bathrooms'] or prop['size_sqm'] %}
+        {% if prop['bedrooms'] or prop['bathrooms'] or prop['garages'] or prop['size_sqm'] or prop['erf_size_sqm'] %}
         <div class="lp-detail-specs d-flex flex-wrap gap-0 mb-4">
           {% if prop['bedrooms'] %}
           <div class="lp-detail-spec-item border-end px-4">
@@ -108,11 +145,25 @@
             <span>Bathroom{{ 's' if prop['bathrooms'] != 1 }}</span>
           </div>
           {% endif %}
+          {% if prop['garages'] %}
+          <div class="lp-detail-spec-item border-end px-4">
+            <i class="bi bi-car-front-fill"></i>
+            <strong>{{ prop['garages'] }}</strong>
+            <span>Garage{{ 's' if prop['garages'] != 1 }}</span>
+          </div>
+          {% endif %}
           {% if prop['size_sqm'] %}
-          <div class="lp-detail-spec-item px-4">
+          <div class="lp-detail-spec-item {% if prop['erf_size_sqm'] %}border-end{% endif %} px-4">
             <i class="bi bi-arrows-fullscreen"></i>
             <strong>{{ prop['size_sqm'] }} m²</strong>
             <span>Floor Area</span>
+          </div>
+          {% endif %}
+          {% if prop['erf_size_sqm'] %}
+          <div class="lp-detail-spec-item px-4">
+            <i class="bi bi-crop"></i>
+            <strong>{{ prop['erf_size_sqm'] }} m²</strong>
+            <span>Erf Size</span>
           </div>
           {% endif %}
         </div>
@@ -205,11 +256,13 @@
 
             <!-- Square photo -->
             {% if agent_profile_image %}
-              <img src="{{ url_for('static', filename='uploads/agents/' ~ agent_profile_image) }}"
-                   alt="{{ agent_name }}"
-                   style="width:100%;height:230px;object-fit:cover;object-position:top;display:block;" />
+              <div style="width:100%;aspect-ratio:1/1;overflow:hidden;">
+                <img src="{{ url_for('static', filename='uploads/agents/' ~ agent_profile_image) }}"
+                     alt="{{ agent_name }}"
+                     style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" />
+              </div>
             {% else %}
-              <div style="width:100%;height:180px;background:linear-gradient(135deg,var(--lp-navy) 0%,#2c3e7a 100%);display:flex;align-items:center;justify-content:center;">
+              <div style="width:100%;aspect-ratio:1/1;background:linear-gradient(135deg,var(--lp-navy) 0%,#2c3e7a 100%);display:flex;align-items:center;justify-content:center;">
                 <i class="bi bi-person-fill text-white" style="font-size:5rem;opacity:0.25;"></i>
               </div>
             {% endif %}
@@ -277,6 +330,33 @@
 
 {% block extra_js %}
 <script>
+/* ── Gallery ─────────────────────────────────────────────────── */
+const galImages = [
+  {% for img in gallery %}
+  "{{ url_for('static', filename='uploads/' ~ img['filename']) }}"{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+let galIdx = 0;
+
+function galJump(idx) {
+  galIdx = idx;
+  const main = document.getElementById('galMain');
+  main.style.opacity = '0';
+  setTimeout(() => { main.src = galImages[idx]; main.style.opacity = '1'; }, 150);
+  const cur = document.getElementById('galCurrent');
+  if (cur) cur.textContent = idx + 1;
+  document.querySelectorAll('.gal-thumb').forEach((t, i) => {
+    t.style.borderColor = i === idx ? 'var(--lp-orange)' : 'transparent';
+  });
+}
+function galNav(dir) {
+  galJump((galIdx + dir + galImages.length) % galImages.length);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  galNav(-1);
+  if (e.key === 'ArrowRight') galNav(1);
+});
+
 /* ── Widget bond calculator ──────────────────────────────────── */
 function fmt(n) {
   return 'R ' + Math.round(n).toLocaleString('en-ZA');

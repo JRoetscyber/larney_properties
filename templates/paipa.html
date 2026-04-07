@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}PAIPA – Larney Properties{% endblock %}
+
+{% block content %}
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">PAIPA</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-file-earmark-ruled-fill me-2" style="color:var(--lp-orange);"></i>
+      PAIPA
+    </h1>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm" style="border-radius:var(--lp-radius);overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-file-earmark-text fs-1 opacity-25 d-block mb-3"></i>
+              <p class="fw-semibold mb-1" style="color:var(--lp-navy);">Content coming soon.</p>
+              <p class="small">Our PAIPA information will be published here shortly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

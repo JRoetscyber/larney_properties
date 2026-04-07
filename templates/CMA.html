@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Home Price Estimation – Larney Properties{% endblock %}
+
+{% block content %}
+
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Home Price Estimation</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-graph-up-arrow me-2" style="color:var(--lp-orange);"></i>
+      Home Price Estimation
+    </h1>
+    <p class="text-white-50 small mt-1 mb-0">
+      Fill in the details below — a branded PDF report will be generated and downloaded automatically.
+    </p>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-9">
+
+        <form method="POST" action="{{ url_for('cma') }}" novalidate>
+
+          <!-- ── CLIENT & MACRO ──────────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);letter-spacing:0.5px;">
+                <i class="bi bi-person-fill lp-icon-accent me-2"></i>Client & Market Indicators
+              </h6>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Client Surname <span class="text-danger">*</span></label>
+                  <input type="text" name="client_name" class="form-control"
+                         placeholder="e.g. Van der Merwe"
+                         value="{{ form.get('client_name','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Property Address <span class="text-danger">*</span></label>
+                  <input type="text" name="address" class="form-control"
+                         placeholder="e.g. 12 Oak Street, Nigel"
+                         value="{{ form.get('address','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">
+                    Annual Inflation Rate (%) <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="number" name="inflation_rate" class="form-control"
+                           placeholder="e.g. 5.5" step="0.1" min="0" max="50"
+                           value="{{ form.get('inflation_rate','5.5') }}" required />
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">
+                    SARB Repo Rate (%) <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group">
+                    <input type="number" name="repo_rate" class="form-control"
+                           placeholder="e.g. 8.25" step="0.25" min="0" max="30"
+                           value="{{ form.get('repo_rate','8.25') }}" required />
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SUBJECT PROPERTY ────────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:var(--lp-navy);"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);">
+                <i class="bi bi-house-fill lp-icon-accent me-2"></i>Subject Property
+              </h6>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Date Last Sold <span class="text-danger">*</span></label>
+                  <input type="date" name="subj_date" class="form-control"
+                         value="{{ form.get('subj_date','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Price Last Sold For (R) <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                    <input type="text" name="subj_price" class="form-control price-input"
+                           placeholder="e.g. 1 200 000"
+                           value="{{ form.get('subj_price','') }}" required />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── COMPARABLE PROPERTIES ───────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-mustard),var(--lp-orange));"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-1" style="color:var(--lp-navy);">
+                <i class="bi bi-buildings-fill lp-icon-accent me-2"></i>Comparable Sales
+              </h6>
+              <p class="small text-muted mb-4">
+                Enter 3 recent sales from the same area with similar property specs.
+              </p>
+
+              {% for i in range(1,4) %}
+              <div class="p-3 rounded-3 mb-3" style="background:{% if i == 1 %}rgba(241,91,34,0.06){% elif i == 2 %}rgba(247,145,29,0.06){% else %}rgba(27,38,86,0.05){% endif %};">
+                <p class="fw-semibold small mb-3" style="color:var(--lp-navy);">
+                  <span class="badge me-2" style="background:{% if i==1 %}var(--lp-orange){% elif i==2 %}var(--lp-mustard){% else %}var(--lp-navy){% endif %};">{{ i }}</span>
+                  Comparable Property {{ i }}
+                </p>
+                <div class="row g-3">
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">Date Sold <span class="text-danger">*</span></label>
+                    <input type="date" name="c{{ i }}_date" class="form-control form-control-sm"
+                           value="{{ form.get('c' ~ i ~ '_date','') }}" required />
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label class="form-label fw-semibold small">Price Sold For (R) <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                      <input type="text" name="c{{ i }}_price" class="form-control price-input"
+                             placeholder="e.g. 1 150 000"
+                             value="{{ form.get('c' ~ i ~ '_price','') }}" required />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+
+            </div>
+          </div>
+
+          <!-- ── SUBMIT ──────────────────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3">
+                <div class="flex-grow-1">
+                  <p class="fw-semibold mb-0" style="color:var(--lp-navy);">Ready to generate?</p>
+                  <p class="small text-muted mb-0">
+                    A branded PDF valuation report will download automatically.
+                  </p>
+                </div>
+                <button type="submit" class="btn lp-btn-primary px-5 py-2 fw-bold" id="generateBtn">
+                  <i class="bi bi-file-earmark-arrow-down me-2"></i>Generate PDF
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Price formatter
+  document.querySelectorAll('.price-input').forEach(input => {
+    input.addEventListener('input', function () {
+      const digits = this.value.replace(/\D/g, '');
+      this.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    });
+  });
+
+  // Show spinner on submit
+  document.querySelector('form').addEventListener('submit', function () {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating PDF…';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-file-earmark-arrow-down me-2"></i>Generate PDF';
+    }, 15000);
+  });
+</script>
+{% endblock %}
