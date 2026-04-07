@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}{{ prop['title'] }} – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-3">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white" aria-current="page">
+          {{ prop['title'] | truncate(40) }}
+        </li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<!-- ── Main content ──────────────────────────────────────────────────────── -->
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row g-4 align-items-start">
+
+      <!-- ── LEFT: Property info ─────────────────────────────────────────── -->
+      <div class="col-12 col-lg-8">
+
+        <!-- Image -->
+        {% if prop['image_filename'] %}
+          <img src="{{ url_for('static', filename='uploads/' ~ prop['image_filename']) }}"
+               alt="{{ prop['title'] }}" class="lp-detail-img mb-4 shadow" />
+        {% else %}
+          <div class="lp-detail-img mb-4 shadow bg-light d-flex align-items-center
+                      justify-content-center" style="height:340px; border-radius:12px;">
+            <i class="bi bi-house-fill fs-1 opacity-25" style="color:var(--lp-navy);"></i>
+          </div>
+        {% endif %}
+
+        <!-- Badges + actions row -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span class="lp-badge-status px-3 py-2
+                       {% if (prop['status'] or 'For Sale') == 'For Sale' %}lp-badge-sale{% else %}lp-badge-let{% endif %}">
+            {{ prop['status'] or 'For Sale' }}
+          </span>
+          <span class="badge bg-dark bg-opacity-75 px-3 py-2">
+            {{ prop['property_type'] or 'House' }}
+          </span>
+          {% if prop['is_featured'] %}
+          <span class="badge px-3 py-2"
+                style="background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));">
+            <i class="bi bi-star-fill me-1"></i>Featured
+          </span>
+          {% endif %}
+
+          <div class="ms-auto d-flex gap-2 flex-wrap">
+            <!-- Copy link -->
+            <button class="btn btn-outline-secondary btn-sm" id="copyLinkBtn"
+                    title="Copy listing link">
+              <i class="bi bi-link-45deg me-1"></i>Copy Link
+            </button>
+            <!-- Print -->
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"
+                    title="Print this listing">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+            {% if current_agent %}
+            <!-- Edit -->
+            <a href="{{ url_for('edit_property', prop_id=prop['id']) }}"
+               class="btn btn-outline-warning btn-sm">
+              <i class="bi bi-pencil-fill me-1"></i>Edit
+            </a>
+            <!-- Delete -->
+            <form method="POST"
+                  action="{{ url_for('delete_property', prop_id=prop['id']) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete {{ prop['title'] | e }}?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash-fill me-1"></i>Delete
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Price + title -->
+        <div class="lp-price-large mb-1">R {{ prop['price'] | format_price }}</div>
+        <h1 class="h2 fw-bold mb-1" style="color:var(--lp-navy);">{{ prop['title'] }}</h1>
+        <p class="text-muted mb-4">
+          <i class="bi bi-geo-alt-fill lp-icon-accent me-1"></i>{{ prop['location'] }}
+        </p>
+
+        <!-- Specs strip -->
+        {% if prop['bedrooms'] or prop['bathrooms'] or prop['size_sqm'] %}
+        <div class="lp-detail-specs d-flex flex-wrap gap-0 mb-4">
+          {% if prop['bedrooms'] %}
+          <div class="lp-detail-spec-item border-end px-4">
+            <i class="bi bi-door-open-fill"></i>
+            <strong>{{ prop['bedrooms'] }}</strong>
+            <span>Bedroom{{ 's' if prop['bedrooms'] != 1 }}</span>
+          </div>
+          {% endif %}
+          {% if prop['bathrooms'] %}
+          <div class="lp-detail-spec-item border-end px-4">
+            <i class="bi bi-droplet-fill"></i>
+            <strong>{{ prop['bathrooms'] }}</strong>
+            <span>Bathroom{{ 's' if prop['bathrooms'] != 1 }}</span>
+          </div>
+          {% endif %}
+          {% if prop['size_sqm'] %}
+          <div class="lp-detail-spec-item px-4">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <strong>{{ prop['size_sqm'] }} m²</strong>
+            <span>Floor Area</span>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Description -->
+        {% if prop['description'] %}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:var(--lp-radius);">
+          <h5 class="fw-bold mb-3" style="color:var(--lp-navy);">
+            <i class="bi bi-file-text-fill lp-icon-accent me-2"></i>About This Property
+          </h5>
+          <p class="text-muted mb-0" style="line-height:1.8;">{{ prop['description'] }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Location placeholder -->
+        <div class="card border-0 shadow-sm p-4" style="border-radius:var(--lp-radius);">
+          <h5 class="fw-bold mb-2" style="color:var(--lp-navy);">
+            <i class="bi bi-geo-alt-fill lp-icon-accent me-2"></i>Location
+          </h5>
+          <p class="text-muted small mb-0">
+            {{ prop['location'] }} — Contact our agents for the exact address and to arrange a viewing.
+          </p>
+        </div>
+
+      </div><!-- /col-lg-8 -->
+
+
+      <!-- ── RIGHT: Sidebar ──────────────────────────────────────────────── -->
+      <div class="col-12 col-lg-4">
+        <div style="position:sticky; top:76px;">
+
+          <!-- Bond Calculator widget ───────────────────────── -->
+          <div class="card border-0 shadow lp-calc-card mb-3">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-3" style="color:var(--lp-navy);">
+                <i class="bi bi-calculator-fill lp-icon-accent me-2"></i>Bond Calculator
+              </h6>
+
+              <div class="mb-3">
+                <label class="lp-calc-input-label">Property Price (R)</label>
+                <input type="number" id="wPrice" class="form-control"
+                       value="{{ price_numeric }}" min="0" step="10000" />
+              </div>
+              <div class="mb-3">
+                <label class="lp-calc-input-label">Deposit (R)</label>
+                <input type="number" id="wDeposit" class="form-control"
+                       value="0" min="0" step="10000" />
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col">
+                  <label class="lp-calc-input-label">Interest Rate (%)</label>
+                  <input type="number" id="wRate" class="form-control"
+                         value="10.25" min="0" max="30" step="0.25" />
+                </div>
+                <div class="col">
+                  <label class="lp-calc-input-label">Term (years)</label>
+                  <select id="wTerm" class="form-select">
+                    <option value="5">5 yrs</option>
+                    <option value="10">10 yrs</option>
+                    <option value="15">15 yrs</option>
+                    <option value="20" selected>20 yrs</option>
+                    <option value="25">25 yrs</option>
+                    <option value="30">30 yrs</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Result -->
+              <div class="lp-calc-result-card p-3 text-center mb-3">
+                <div class="lp-calc-label mb-1">Estimated Monthly Repayment</div>
+                <div class="lp-calc-monthly-sm" id="wMonthly">R —</div>
+                <div class="small mt-2" style="color:rgba(255,255,255,0.60);">
+                  Total: <span id="wTotal" class="text-white fw-semibold">—</span>
+                  &nbsp;|&nbsp;
+                  Interest: <span id="wInterest" class="text-white fw-semibold">—</span>
+                </div>
+              </div>
+
+              <a href="{{ url_for('bond_calculator') }}" class="btn lp-btn-outline w-100 btn-sm">
+                <i class="bi bi-calculator me-1"></i>Full Bond Calculator
+              </a>
+            </div>
+          </div>
+
+          <!-- Contact card ────────────────────────────────────── -->
+          <div class="card border-0 shadow" style="border-radius:var(--lp-radius);">
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-3" style="color:var(--lp-navy);">
+                <i class="bi bi-person-fill lp-icon-accent me-2"></i>Interested? Get in Touch
+              </h6>
+              <p class="small text-muted mb-3">
+                Contact a Larney Properties agent for more information or to book a viewing.
+              </p>
+
+              <a href="tel:+{{ agent_phone_wa }}" class="btn lp-btn-navy w-100 mb-2">
+                <i class="bi bi-telephone-fill me-2"></i>{{ agent_phone_display }}
+              </a>
+              <a href="https://wa.me/{{ agent_phone_wa }}?text={{ ('Hi, I am interested in: ' ~ prop['title'] ~ ' - ' ~ prop['location']) | urlencode }}"
+                 target="_blank" rel="noopener"
+                 class="btn btn-success w-100 mb-2">
+                <i class="bi bi-whatsapp me-2"></i>WhatsApp
+              </a>
+              <a href="mailto:{{ agent_email }}?subject={{ ('Enquiry: ' ~ prop['title']) | urlencode }}"
+                 class="btn lp-btn-outline w-100">
+                <i class="bi bi-envelope-fill me-2"></i>Send Email
+              </a>
+            </div>
+          </div>
+
+        </div><!-- /sticky -->
+      </div><!-- /col-lg-4 -->
+
+    </div><!-- /row -->
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Widget bond calculator ──────────────────────────────────── */
+function fmt(n) {
+  return 'R ' + Math.round(n).toLocaleString('en-ZA');
+}
+
+function calcBond(price, deposit, annualRate, years) {
+  const P = price - deposit;
+  if (P <= 0) return null;
+  const r = annualRate / 1200;
+  const n = years * 12;
+  if (r === 0) return { monthly: P / n, total: P, interest: 0 };
+  const M = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+  return { monthly: M, total: M * n, interest: M * n - P };
+}
+
+function updateWidget() {
+  const price   = parseFloat(document.getElementById('wPrice').value)   || 0;
+  const deposit = parseFloat(document.getElementById('wDeposit').value) || 0;
+  const rate    = parseFloat(document.getElementById('wRate').value)    || 10.25;
+  const years   = parseInt(document.getElementById('wTerm').value, 10)  || 20;
+  const res     = calcBond(price, deposit, rate, years);
+
+  document.getElementById('wMonthly').textContent  = res ? fmt(res.monthly)  : 'R —';
+  document.getElementById('wTotal').textContent    = res ? fmt(res.total)    : '—';
+  document.getElementById('wInterest').textContent = res ? fmt(res.interest) : '—';
+}
+
+['wPrice', 'wDeposit', 'wRate', 'wTerm'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateWidget);
+});
+updateWidget();
+
+
+/* ── Copy link button ────────────────────────────────────────── */
+document.getElementById('copyLinkBtn').addEventListener('click', function () {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    this.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Copied!';
+    setTimeout(() => {
+      this.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Copy Link';
+    }, 2000);
+  });
+});
+</script>
+{% endblock %}

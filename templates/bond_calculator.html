@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}Bond Calculator – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Bond Calculator</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-calculator-fill me-2" style="color:var(--lp-orange);"></i>Bond Calculator
+    </h1>
+    <p class="text-white opacity-75 small mb-0 mt-1">
+      Estimate your monthly mortgage repayments instantly.
+    </p>
+  </div>
+</div>
+
+<!-- ── Calculator ────────────────────────────────────────────────────────── -->
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row g-4 align-items-start">
+
+      <!-- ── INPUTS ─────────────────────────────────────────────────────── -->
+      <div class="col-12 col-lg-5">
+        <div class="card border-0 shadow lp-calc-card">
+          <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+          <div class="card-body p-4 p-md-5">
+
+            <h5 class="fw-bold mb-4" style="color:var(--lp-navy);">Loan Details</h5>
+
+            <!-- Property price -->
+            <div class="mb-4">
+              <label class="lp-calc-input-label" for="price">
+                <i class="bi bi-house-fill lp-icon-accent me-1"></i>Property Price
+              </label>
+              <div class="input-group">
+                <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                <input type="number" id="price" class="form-control form-control-lg"
+                       value="1500000" min="0" step="50000" />
+              </div>
+              <input type="range" id="priceRange" class="form-range lp-range-input mt-2"
+                     min="100000" max="20000000" step="50000" value="1500000" />
+              <div class="d-flex justify-content-between">
+                <small class="text-muted">R 100k</small>
+                <small class="text-muted">R 20M</small>
+              </div>
+            </div>
+
+            <!-- Deposit -->
+            <div class="mb-4">
+              <label class="lp-calc-input-label" for="deposit">
+                <i class="bi bi-piggy-bank-fill lp-icon-accent me-1"></i>Deposit
+              </label>
+              <div class="input-group mb-2">
+                <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                <input type="number" id="deposit" class="form-control form-control-lg"
+                       value="0" min="0" step="10000" />
+                <span class="input-group-text text-muted" id="depositPct">0%</span>
+              </div>
+              <input type="range" id="depositRange" class="form-range lp-range-input"
+                     min="0" max="100" step="1" value="0" />
+              <div class="d-flex justify-content-between">
+                <small class="text-muted">0%</small>
+                <small class="text-muted">100%</small>
+              </div>
+            </div>
+
+            <!-- Interest rate -->
+            <div class="mb-4">
+              <label class="lp-calc-input-label" for="rate">
+                <i class="bi bi-percent lp-icon-accent me-1"></i>Interest Rate
+                <span class="badge ms-1 text-bg-light" style="font-size:0.72rem;color:#888;">
+                  Prime + 0% = 10.25%
+                </span>
+              </label>
+              <div class="input-group">
+                <input type="number" id="rate" class="form-control form-control-lg"
+                       value="10.25" min="1" max="30" step="0.25" />
+                <span class="input-group-text">%</span>
+              </div>
+              <input type="range" id="rateRange" class="form-range lp-range-input mt-2"
+                     min="1" max="25" step="0.25" value="10.25" />
+              <div class="d-flex justify-content-between">
+                <small class="text-muted">1%</small>
+                <small class="text-muted">25%</small>
+              </div>
+            </div>
+
+            <!-- Loan term -->
+            <div class="mb-2">
+              <label class="lp-calc-input-label">
+                <i class="bi bi-calendar3 lp-icon-accent me-1"></i>Loan Term
+              </label>
+              <div class="d-flex gap-2 flex-wrap">
+                {% for yr in [5, 10, 15, 20, 25, 30] %}
+                <button class="btn btn-sm lp-btn-outline term-btn {% if yr == 20 %}lp-btn-primary text-white{% endif %}"
+                        data-years="{{ yr }}">{{ yr }} yrs</button>
+                {% endfor %}
+              </div>
+              <input type="hidden" id="term" value="20" />
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /col inputs -->
+
+
+      <!-- ── RESULTS ────────────────────────────────────────────────────── -->
+      <div class="col-12 col-lg-7">
+
+        <!-- Monthly payment hero card -->
+        <div class="lp-calc-result-card p-4 p-md-5 mb-4 text-center">
+          <p class="lp-calc-label mb-2">Monthly Repayment</p>
+          <div class="lp-calc-monthly mb-1" id="resultMonthly">R 0</div>
+          <p class="small mb-0" style="color:rgba(255,255,255,0.55);">
+            Based on your selected loan details
+          </p>
+        </div>
+
+        <!-- Breakdown cards row -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+              <div class="small text-muted mb-1">Loan Amount</div>
+              <div class="fw-bold" style="color:var(--lp-navy);" id="resultLoan">R 0</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+              <div class="small text-muted mb-1">Deposit</div>
+              <div class="fw-bold" style="color:var(--lp-navy);" id="resultDeposit">R 0</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+              <div class="small text-muted mb-1">Total Interest</div>
+              <div class="fw-bold" style="color:var(--lp-orange);" id="resultInterest">R 0</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3">
+              <div class="small text-muted mb-1">Total Repayment</div>
+              <div class="fw-bold" style="color:var(--lp-navy);" id="resultTotal">R 0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual breakdown -->
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:var(--lp-radius);">
+          <h6 class="fw-bold mb-3" style="color:var(--lp-navy);">Repayment Breakdown</h6>
+
+          <div class="d-flex justify-content-between small mb-1">
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:2px;background:var(--lp-orange);"></span>Loan</span>
+            <span id="barLoanPct" class="fw-semibold">—</span>
+          </div>
+          <div class="lp-breakdown-bar mb-3">
+            <div class="lp-breakdown-loan" id="barLoan" style="width:0%;float:left;"></div>
+            <div class="lp-breakdown-interest" id="barInterest" style="width:0%;float:left;"></div>
+          </div>
+          <div class="d-flex justify-content-between small mb-3">
+            <span><span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:2px;background:var(--lp-mustard);"></span>Interest</span>
+            <span id="barIntPct" class="fw-semibold">—</span>
+          </div>
+
+          <!-- Amortisation summary table -->
+          <div class="table-responsive mt-2">
+            <table class="table table-sm table-borderless small mb-0">
+              <thead>
+                <tr style="color:var(--lp-navy);">
+                  <th>Period</th>
+                  <th class="text-end">Monthly</th>
+                  <th class="text-end">Interest portion</th>
+                  <th class="text-end">Capital portion</th>
+                </tr>
+              </thead>
+              <tbody id="amortTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Affordability tip -->
+        <div class="lp-affordability-box">
+          <p class="small mb-0">
+            <i class="bi bi-lightbulb-fill lp-icon-accent me-2"></i>
+            <strong>Affordability guide:</strong>
+            Banks typically approve bonds where repayments are ≤ 30% of gross monthly income.
+            To qualify for this loan you'd need approx.
+            <strong id="incomeNeeded" style="color:var(--lp-orange);">R —</strong>/month gross income.
+          </p>
+        </div>
+
+      </div><!-- /col results -->
+
+    </div><!-- /row -->
+
+    <!-- Info note -->
+    <p class="text-muted small text-center mt-4 mb-0">
+      <i class="bi bi-info-circle me-1"></i>
+      Results are estimates only. Rates shown are based on the South African prime lending rate of 10.25%.
+      Consult a registered bond originator for official pre-approval.
+    </p>
+
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Helpers ─────────────────────────────────────────────────── */
+function fmt(n) {
+  return 'R ' + Math.round(n).toLocaleString('en-ZA');
+}
+
+function calcBond(price, deposit, annualRate, years) {
+  const P = price - deposit;
+  if (P <= 0) return null;
+  const r = annualRate / 1200;
+  const n = years * 12;
+  if (r === 0) return { monthly: P / n, total: P, interest: 0, principal: P };
+  const M = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+  return { monthly: M, total: M * n, interest: M * n - P, principal: P };
+}
+
+/* ── Two-way slider ↔ input sync ─────────────────────────────── */
+function syncPair(inputId, rangeId, onUpdate) {
+  const inp = document.getElementById(inputId);
+  const rng = document.getElementById(rangeId);
+  inp.addEventListener('input', () => { rng.value = inp.value; onUpdate(); });
+  rng.addEventListener('input', () => { inp.value = rng.value; onUpdate(); });
+}
+
+syncPair('price', 'priceRange', () => {
+  // Keep deposit range max = price
+  const p = parseFloat(document.getElementById('price').value) || 0;
+  document.getElementById('depositRange').max = 100;
+  updateDepositFromRange();
+  update();
+});
+syncPair('rate', 'rateRange', update);
+
+/* Deposit: range is %, number is R */
+document.getElementById('depositRange').addEventListener('input', updateDepositFromRange);
+document.getElementById('deposit').addEventListener('input', () => {
+  const p = parseFloat(document.getElementById('price').value) || 1;
+  const d = parseFloat(document.getElementById('deposit').value) || 0;
+  const pct = Math.min(Math.round(d / p * 100), 100);
+  document.getElementById('depositRange').value = pct;
+  update();
+});
+
+function updateDepositFromRange() {
+  const pct = parseFloat(document.getElementById('depositRange').value) || 0;
+  const p   = parseFloat(document.getElementById('price').value) || 0;
+  const d   = Math.round(p * pct / 100);
+  document.getElementById('deposit').value = d;
+  update();
+}
+
+/* ── Term buttons ────────────────────────────────────────────── */
+document.querySelectorAll('.term-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.term-btn').forEach(b => {
+      b.classList.remove('lp-btn-primary', 'text-white');
+      b.classList.add('lp-btn-outline');
+    });
+    btn.classList.add('lp-btn-primary', 'text-white');
+    btn.classList.remove('lp-btn-outline');
+    document.getElementById('term').value = btn.dataset.years;
+    update();
+  });
+});
+
+/* ── Main update function ────────────────────────────────────── */
+function update() {
+  const price   = parseFloat(document.getElementById('price').value)   || 0;
+  const deposit = parseFloat(document.getElementById('deposit').value) || 0;
+  const rate    = parseFloat(document.getElementById('rate').value)    || 10.25;
+  const years   = parseInt(document.getElementById('term').value, 10)  || 20;
+  const pct     = price > 0 ? Math.round(deposit / price * 100) : 0;
+
+  document.getElementById('depositPct').textContent = pct + '%';
+
+  const res = calcBond(price, deposit, rate, years);
+
+  if (!res) {
+    ['resultMonthly','resultLoan','resultDeposit','resultInterest','resultTotal','incomeNeeded']
+      .forEach(id => { document.getElementById(id).textContent = '—'; });
+    return;
+  }
+
+  document.getElementById('resultMonthly').textContent  = fmt(res.monthly);
+  document.getElementById('resultLoan').textContent     = fmt(res.principal);
+  document.getElementById('resultDeposit').textContent  = fmt(deposit);
+  document.getElementById('resultInterest').textContent = fmt(res.interest);
+  document.getElementById('resultTotal').textContent    = fmt(res.total);
+  document.getElementById('incomeNeeded').textContent   = fmt(res.monthly / 0.30);
+
+  // Breakdown bars
+  const loanPct = Math.round(res.principal / res.total * 100);
+  const intPct  = 100 - loanPct;
+  document.getElementById('barLoan').style.width     = loanPct + '%';
+  document.getElementById('barInterest').style.width = intPct  + '%';
+  document.getElementById('barLoanPct').textContent  = loanPct + '%';
+  document.getElementById('barIntPct').textContent   = intPct  + '%';
+
+  // Amortisation table (year 1, 5, 10, final)
+  buildAmortTable(res.principal, rate, years);
+}
+
+function buildAmortTable(P, annualRate, years) {
+  const r = annualRate / 1200;
+  const n = years * 12;
+  const M = r === 0 ? P / n : P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+
+  const checkpoints = [1, 5, 10, Math.floor(years / 2), years].filter(y => y <= years);
+  const unique = [...new Set(checkpoints)].sort((a, b) => a - b);
+
+  let balance = P;
+  let tbody = '';
+  let month  = 0;
+
+  for (const yr of unique) {
+    const targetMonth = yr * 12;
+    while (month < targetMonth && balance > 0) {
+      const intPortion = balance * r;
+      const capPortion = Math.min(M - intPortion, balance);
+      balance -= capPortion;
+      month++;
+    }
+    if (balance < 0) balance = 0;
+    tbody += `<tr>
+      <td>Year ${yr}</td>
+      <td class="text-end">${fmt(M)}</td>
+      <td class="text-end" style="color:var(--lp-orange);">${fmt(balance * r)}</td>
+      <td class="text-end" style="color:var(--lp-navy);">${fmt(M - balance * r)}</td>
+    </tr>`;
+  }
+
+  document.getElementById('amortTable').innerHTML = tbody;
+}
+
+// Initial render
+update();
+</script>
+{% endblock %}

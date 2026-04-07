@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+.Python
+env/
+venv/
+.venv/
+
+# Packages
+*.egg-info/
+dist/
+build/
+pip-wheel-metadata/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Local tools and caches
+.claude/
+*.exe
+
+# Databases
+*.db
+
+# Uploads and generated media
+uploads/
+static/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

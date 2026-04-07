@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block title %}Edit Property – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('property_detail', prop_id=prop['id']) }}"
+             class="text-white-50 text-decoration-none">{{ prop['title'] | truncate(30) }}</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Edit</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-pencil-fill me-2" style="color:var(--lp-orange);"></i>Edit Property
+    </h1>
+  </div>
+</div>
+
+<!-- ── Form ──────────────────────────────────────────────────────────────── -->
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-9">
+
+        <div class="card border-0 shadow-sm" style="border-radius:12px;overflow:hidden;">
+          <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+          <div class="card-body p-4 p-md-5">
+
+            <p class="text-muted mb-4 small">
+              Update any fields below and click <strong>Save Changes</strong>.
+              Fields marked <span class="text-danger">*</span> are required.
+            </p>
+
+            <form method="POST" action="{{ url_for('edit_property', prop_id=prop['id']) }}"
+                  enctype="multipart/form-data" novalidate>
+
+              <!-- ── BASIC INFO ──────────────────────────────────────────── -->
+              <h6 class="fw-bold text-uppercase mb-3 small"
+                  style="color:var(--lp-orange);letter-spacing:1.2px;">
+                <i class="bi bi-info-circle-fill me-1"></i>Basic Information
+              </h6>
+
+              <div class="mb-4">
+                <label for="title" class="form-label fw-semibold">
+                  Property Title <span class="text-danger">*</span>
+                </label>
+                <input type="text" id="title" name="title" class="form-control form-control-lg"
+                       placeholder="e.g. Spacious Family Home in Sandton"
+                       value="{{ form.get('title', '') }}" required />
+              </div>
+
+              <div class="row g-4 mb-4">
+                <div class="col-12 col-md-5">
+                  <label for="price" class="form-label fw-semibold">
+                    Asking Price <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group input-group-lg">
+                    <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                    <input type="text" id="price" name="price" class="form-control"
+                           placeholder="e.g. 2 500 000"
+                           value="{{ form.get('price', '') }}" required />
+                  </div>
+                </div>
+                <div class="col-12 col-md-7">
+                  <label for="location" class="form-label fw-semibold">
+                    Location <span class="text-danger">*</span>
+                  </label>
+                  <div class="input-group input-group-lg">
+                    <span class="input-group-text">
+                      <i class="bi bi-geo-alt-fill" style="color:var(--lp-orange);"></i>
+                    </span>
+                    <input type="text" id="location" name="location" class="form-control"
+                           placeholder="e.g. Sandton, Johannesburg"
+                           value="{{ form.get('location', '') }}" required />
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── PROPERTY DETAILS ────────────────────────────────────── -->
+              <h6 class="fw-bold text-uppercase mb-3 small mt-4"
+                  style="color:var(--lp-orange);letter-spacing:1.2px;">
+                <i class="bi bi-house-fill me-1"></i>Property Details
+              </h6>
+
+              <div class="row g-4 mb-4">
+                <!-- Type -->
+                <div class="col-12 col-sm-6 col-md-4">
+                  <label for="property_type" class="form-label fw-semibold">Property Type</label>
+                  <select id="property_type" name="property_type" class="form-select form-select-lg">
+                    {% for t in ['House','Apartment','Townhouse','Plot','Commercial','Farm'] %}
+                    <option value="{{ t }}"
+                      {{ 'selected' if form.get('property_type', 'House') == t }}>{{ t }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <!-- Status -->
+                <div class="col-12 col-sm-6 col-md-4">
+                  <label class="form-label fw-semibold">Status</label>
+                  <div class="d-flex gap-3 mt-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="status"
+                             id="statusSale" value="For Sale"
+                             {{ 'checked' if form.get('status', 'For Sale') == 'For Sale' }}>
+                      <label class="form-check-label fw-semibold" for="statusSale"
+                             style="color:var(--lp-orange);">
+                        <i class="bi bi-tag-fill me-1"></i>For Sale
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="status"
+                             id="statusLet" value="To Let"
+                             {{ 'checked' if form.get('status') == 'To Let' }}>
+                      <label class="form-check-label fw-semibold" for="statusLet"
+                             style="color:var(--lp-navy);">
+                        <i class="bi bi-key-fill me-1"></i>To Let
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Featured -->
+                <div class="col-12 col-md-4 d-flex align-items-end">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="is_featured" name="is_featured"
+                           {{ 'checked' if form.get('is_featured') }}
+                           style="width:2.5rem;height:1.3rem;">
+                    <label class="form-check-label fw-semibold ms-2" for="is_featured">
+                      <i class="bi bi-star-fill me-1" style="color:var(--lp-mustard);"></i>
+                      Mark as Featured
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Beds / Baths / Size -->
+              <div class="row g-4 mb-4">
+                <div class="col-12 col-sm-4">
+                  <label for="bedrooms" class="form-label fw-semibold">
+                    <i class="bi bi-door-open-fill lp-icon-accent me-1"></i>Bedrooms
+                  </label>
+                  <input type="number" id="bedrooms" name="bedrooms" class="form-control"
+                         min="0" max="20" value="{{ form.get('bedrooms', 0) }}" placeholder="0" />
+                </div>
+                <div class="col-12 col-sm-4">
+                  <label for="bathrooms" class="form-label fw-semibold">
+                    <i class="bi bi-droplet-fill lp-icon-accent me-1"></i>Bathrooms
+                  </label>
+                  <input type="number" id="bathrooms" name="bathrooms" class="form-control"
+                         min="0" max="20" value="{{ form.get('bathrooms', 0) }}" placeholder="0" />
+                </div>
+                <div class="col-12 col-sm-4">
+                  <label for="size_sqm" class="form-label fw-semibold">
+                    <i class="bi bi-arrows-fullscreen lp-icon-accent me-1"></i>Floor Area (m²)
+                  </label>
+                  <input type="number" id="size_sqm" name="size_sqm" class="form-control"
+                         min="0" value="{{ form.get('size_sqm', 0) }}" placeholder="0" />
+                </div>
+              </div>
+
+              <!-- ── DESCRIPTION ─────────────────────────────────────────── -->
+              <h6 class="fw-bold text-uppercase mb-3 small mt-4"
+                  style="color:var(--lp-orange);letter-spacing:1.2px;">
+                <i class="bi bi-file-text-fill me-1"></i>Description
+              </h6>
+
+              <div class="mb-4">
+                <textarea id="description" name="description" class="form-control" rows="5"
+                          placeholder="Describe the property's key features, finishes, nearby amenities…">{{ form.get('description', '') }}</textarea>
+                <div class="d-flex justify-content-between mt-1">
+                  <div class="form-text">Optional but recommended.</div>
+                  <div class="form-text" id="charCount">0 / 1000</div>
+                </div>
+              </div>
+
+              <!-- ── IMAGE ──────────────────────────────────────────────── -->
+              <h6 class="fw-bold text-uppercase mb-3 small mt-4"
+                  style="color:var(--lp-orange);letter-spacing:1.2px;">
+                <i class="bi bi-image-fill me-1"></i>Property Image
+              </h6>
+
+              {% if prop['image_filename'] %}
+              <div class="d-flex align-items-center gap-3 mb-3 p-3 rounded-3 border"
+                   style="background:#f8f9fa;">
+                <img src="{{ url_for('static', filename='uploads/' ~ prop['image_filename']) }}"
+                     alt="Current image" class="rounded-2 shadow-sm"
+                     style="width:80px;height:60px;object-fit:cover;" />
+                <div>
+                  <p class="mb-0 fw-semibold small" style="color:var(--lp-navy);">Current image</p>
+                  <p class="mb-0 text-muted small">Upload a new image below to replace it,
+                     or leave blank to keep this one.</p>
+                </div>
+              </div>
+              {% endif %}
+
+              <div class="mb-4">
+                <div id="dropZone"
+                     class="border rounded-3 text-center py-4 px-3"
+                     style="border-style:dashed!important;border-color:#ced4da;cursor:pointer;transition:all 0.2s;">
+                  <i class="bi bi-cloud-arrow-up fs-2 d-block mb-2" style="color:var(--lp-orange);"></i>
+                  <p class="mb-1 fw-semibold text-muted">Click to select or drag &amp; drop</p>
+                  <p class="small text-muted mb-3">PNG, JPG, JPEG, WEBP — max 8 MB</p>
+                  <input type="file" id="image" name="image"
+                         accept=".png,.jpg,.jpeg,.webp" class="d-none" />
+                  <button type="button" class="btn lp-btn-outline btn-sm" id="browseBtn">
+                    <i class="bi bi-folder2-open me-1"></i>Browse Files
+                  </button>
+                </div>
+
+                <div id="previewWrap" class="mt-3 d-none text-center">
+                  <img id="imagePreview" src="#" alt="Preview"
+                       class="lp-edit-preview rounded-3 mb-2 shadow-sm" />
+                  <div>
+                    <span id="fileName" class="small text-muted me-3"></span>
+                    <button type="button" class="btn btn-link btn-sm text-danger p-0"
+                            id="clearImage">
+                      <i class="bi bi-x-circle me-1"></i>Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── AGENT CONTACT ──────────────────────────────────────── -->
+              <h6 class="fw-bold text-uppercase mb-3 small mt-4"
+                  style="color:var(--lp-orange);letter-spacing:1.2px;">
+                <i class="bi bi-person-lines-fill me-1"></i>Agent Contact Details
+              </h6>
+              <p class="small text-muted mb-3">
+                These appear on the listing's contact buttons (Call, WhatsApp, Email).
+                Leave blank to use the agency defaults.
+              </p>
+              <div class="row g-4 mb-4">
+                <div class="col-12 col-md-6">
+                  <label for="agent_phone" class="form-label fw-semibold">
+                    <i class="bi bi-telephone-fill lp-icon-accent me-1"></i>Phone / WhatsApp Number
+                  </label>
+                  <input type="tel" id="agent_phone" name="agent_phone" class="form-control"
+                         placeholder="e.g. 083 654 8010"
+                         value="{{ form.get('agent_phone', '') }}" />
+                </div>
+                <div class="col-12 col-md-6">
+                  <label for="agent_email" class="form-label fw-semibold">
+                    <i class="bi bi-envelope-fill lp-icon-accent me-1"></i>Email Address
+                  </label>
+                  <input type="email" id="agent_email" name="agent_email" class="form-control"
+                         placeholder="e.g. agent@larney.co.za"
+                         value="{{ form.get('agent_email', '') }}" />
+                </div>
+              </div>
+
+              <!-- ── SUBMIT ──────────────────────────────────────────────── -->
+              <hr class="my-4" />
+              <div class="d-flex gap-3 justify-content-end">
+                <a href="{{ url_for('property_detail', prop_id=prop['id']) }}"
+                   class="btn lp-btn-outline px-4">Cancel</a>
+                <button type="submit" class="btn lp-btn-primary px-5">
+                  <i class="bi bi-check-circle me-2"></i>Save Changes
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Price formatter — inserts spaces as thousand separators while typing
+  const priceInput = document.getElementById('price');
+  priceInput.addEventListener('input', function () {
+    const digits = this.value.replace(/\D/g, '');
+    this.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  });
+
+  // Character counter
+  const desc      = document.getElementById('description');
+  const charCount = document.getElementById('charCount');
+  function updateCount() {
+    const len = desc.value.length;
+    charCount.textContent = `${len} / 1000`;
+    charCount.style.color = len > 1000 ? '#dc3545' : '#6c757d';
+  }
+  desc.addEventListener('input', updateCount);
+  updateCount();
+
+  // Image drop-zone
+  const fileInput   = document.getElementById('image');
+  const browseBtn   = document.getElementById('browseBtn');
+  const dropZone    = document.getElementById('dropZone');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewImg  = document.getElementById('imagePreview');
+  const fileNameEl  = document.getElementById('fileName');
+  const clearBtn    = document.getElementById('clearImage');
+
+  browseBtn.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', e => { if (e.target !== browseBtn) fileInput.click(); });
+
+  function showPreview(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src         = e.target.result;
+      fileNameEl.textContent = file.name;
+      previewWrap.classList.remove('d-none');
+      dropZone.style.borderColor = 'var(--lp-orange)';
+      dropZone.style.background  = 'rgba(241,91,34,0.04)';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--lp-orange)';
+    dropZone.style.background  = 'rgba(241,91,34,0.04)';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    if (!fileInput.files.length) {
+      dropZone.style.borderColor = '#ced4da';
+      dropZone.style.background  = '';
+    }
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; showPreview(file); }
+  });
+  clearBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    previewWrap.classList.add('d-none');
+    dropZone.style.borderColor = '#ced4da';
+    dropZone.style.background  = '';
+  });
+</script>
+{% endblock %}

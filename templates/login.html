@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Agent Login – Larney Properties{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ───────────────────────────────────────────────────────── -->
+<div class="lp-page-header py-4">
+  <div class="container">
+    <h1 class="text-white fw-bold mt-2 mb-0 fs-3">
+      <i class="bi bi-person-lock me-2" style="color: var(--lp-orange);"></i>Agent Login
+    </h1>
+  </div>
+</div>
+
+<!-- ── Login card ────────────────────────────────────────────────────────── -->
+<section class="py-5" style="background-color: var(--lp-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+
+        <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+
+          <!-- Accent strip -->
+          <div style="height: 4px; background: linear-gradient(90deg, var(--lp-orange), var(--lp-mustard));"></div>
+
+          <div class="card-body p-4 p-md-5">
+            <p class="text-muted mb-4 small">
+              Sign in with your agent credentials to manage property listings.
+            </p>
+
+            <form method="POST" action="{{ url_for('login') }}" novalidate>
+
+              <!-- Username -->
+              <div class="mb-4">
+                <label for="username" class="form-label fw-semibold">Username</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text">
+                    <i class="bi bi-person-fill" style="color: var(--lp-orange);"></i>
+                  </span>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-control"
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">Password</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text">
+                    <i class="bi bi-lock-fill" style="color: var(--lp-orange);"></i>
+                  </span>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-control"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                  />
+                  <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    id="togglePassword"
+                    title="Show / hide password"
+                  >
+                    <i class="bi bi-eye" id="toggleIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Submit -->
+              <div class="d-grid mt-2">
+                <button type="submit" class="btn lp-btn-primary btn-lg">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </button>
+              </div>
+
+            </form>
+          </div><!-- /.card-body -->
+        </div><!-- /.card -->
+
+        <p class="text-center text-muted small mt-3">
+          <i class="bi bi-shield-lock me-1"></i>
+          Access is restricted to authorised Larney Properties agents.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Toggle password visibility
+  const toggleBtn  = document.getElementById('togglePassword');
+  const toggleIcon = document.getElementById('toggleIcon');
+  const pwdInput   = document.getElementById('password');
+
+  toggleBtn.addEventListener('click', () => {
+    const isText = pwdInput.type === 'text';
+    pwdInput.type = isText ? 'password' : 'text';
+    toggleIcon.className = isText ? 'bi bi-eye' : 'bi bi-eye-slash';
+  });
+</script>
+{% endblock %}

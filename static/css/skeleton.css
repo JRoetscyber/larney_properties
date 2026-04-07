@@ -1,0 +1,100 @@
+/* =============================================================
+   Larney Properties – Skeleton / Shimmer Loading
+   Uses the same CSS variables defined in style.css.
+   ============================================================= */
+
+/* ── Shimmer keyframe ──────────────────────────────────────── */
+@keyframes lp-shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+/* ── Base shimmer element ──────────────────────────────────── */
+.lp-skeleton {
+  background: linear-gradient(
+    90deg,
+    #e4e4e4 25%,
+    #efefef 50%,
+    #e4e4e4 75%
+  );
+  background-size: 1600px 100%;
+  animation: lp-shimmer 1.6s infinite linear;
+  border-radius: 4px;
+}
+
+/* ── Card shell — mirrors .lp-card ────────────────────────── */
+.lp-skeleton-card {
+  border-radius: var(--lp-radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  height: 100%;
+}
+
+/* ── Image placeholder — matches .lp-card-img height ──────── */
+.lp-skeleton-img {
+  height: 210px;
+  width: 100%;
+  border-radius: 0;
+}
+
+/* ── Card body ─────────────────────────────────────────────── */
+.lp-skeleton-body {
+  padding: 14px 14px 12px;
+}
+
+.lp-skeleton-price {
+  height: 20px;
+  width: 52%;
+  margin-bottom: 10px;
+}
+
+.lp-skeleton-title {
+  height: 16px;
+  width: 82%;
+  margin-bottom: 8px;
+}
+
+.lp-skeleton-location {
+  height: 13px;
+  width: 56%;
+  margin-bottom: 12px;
+}
+
+.lp-skeleton-text {
+  height: 12px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.lp-skeleton-text-sm {
+  height: 12px;
+  width: 68%;
+  margin-bottom: 14px;
+}
+
+/* ── Specs row ─────────────────────────────────────────────── */
+.lp-skeleton-specs {
+  display: flex;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  margin-bottom: 14px;
+}
+
+.lp-skeleton-spec {
+  height: 12px;
+  width: 56px;
+}
+
+/* ── CTA button ────────────────────────────────────────────── */
+.lp-skeleton-btn {
+  height: 34px;
+  width: 100%;
+  border-radius: 6px;
+}
+
+/* ── Utility: hides skeleton / real grid until ready ───────── */
+.lp-hidden {
+  display: none !important;
+}

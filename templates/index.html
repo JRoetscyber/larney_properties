@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Find Your Property – Larney Properties{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/skeleton.css') }}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════ -->
+<section class="lp-hero d-flex align-items-center">
+  <div class="container text-center text-white position-relative">
+
+    <p class="text-uppercase small fw-semibold mb-2 lp-fade-up"
+       style="color:var(--lp-mustard);letter-spacing:2px;animation-delay:0s;">
+      South Africa's Trusted Property Portal
+    </p>
+
+    <h1 class="display-5 fw-bold mb-3 lp-fade-up" style="animation-delay:.1s;">
+      Find Your Perfect Property
+    </h1>
+
+    <p class="lead mb-5 opacity-75 lp-fade-up" style="animation-delay:.2s;">
+      Browse our latest listings — houses, apartments, and more
+    </p>
+
+    <!-- Search bar -->
+    <form method="GET" action="{{ url_for('index') }}"
+          class="row justify-content-center g-0 lp-search-wrap lp-fade-up"
+          style="animation-delay:.3s;">
+      <div class="col-12 col-md-8 col-lg-6">
+        <div class="input-group input-group-lg shadow">
+          <input type="search" name="q" class="form-control"
+                 placeholder="Search by title, location or type…"
+                 value="{{ query }}" aria-label="Search properties" />
+          <button type="submit" class="btn lp-btn-primary px-4">
+            <i class="bi bi-search me-1"></i>Search
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Hero stats -->
+    <div class="lp-hero-stats lp-fade-up" style="animation-delay:.45s;">
+      <div class="lp-stat-pill">
+        <span class="lp-stat-num" data-target="{{ stats.total }}">0</span>
+        <span class="lp-stat-label">Listings</span>
+      </div>
+      <div class="lp-stat-pill">
+        <span class="lp-stat-num" data-target="{{ stats.for_sale }}">0</span>
+        <span class="lp-stat-label">For Sale</span>
+      </div>
+      <div class="lp-stat-pill">
+        <span class="lp-stat-num" data-target="{{ stats.to_let }}">0</span>
+        <span class="lp-stat-label">To Let</span>
+      </div>
+      <div class="lp-stat-pill">
+        <span class="lp-stat-num" data-target="{{ stats.locations }}">0</span>
+        <span class="lp-stat-label">Locations</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FILTER BAR
+════════════════════════════════════════════════════════════ -->
+<div class="lp-filter-bar">
+  <div class="container">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+
+      <!-- Status group -->
+      <button class="lp-pill active" data-filter-group="status" data-filter-val="all">All</button>
+      <button class="lp-pill" data-filter-group="status" data-filter-val="For Sale">For Sale</button>
+      <button class="lp-pill" data-filter-group="status" data-filter-val="To Let">To Let</button>
+
+      <div class="vr mx-1 d-none d-sm-block opacity-25"></div>
+
+      <!-- Type group -->
+      <button class="lp-pill lp-pill-navy active" data-filter-group="type" data-filter-val="all">All Types</button>
+      <button class="lp-pill lp-pill-navy" data-filter-group="type" data-filter-val="House">House</button>
+      <button class="lp-pill lp-pill-navy" data-filter-group="type" data-filter-val="Apartment">Apartment</button>
+      <button class="lp-pill lp-pill-navy" data-filter-group="type" data-filter-val="Townhouse">Townhouse</button>
+      <button class="lp-pill lp-pill-navy" data-filter-group="type" data-filter-val="Commercial">Commercial</button>
+      <button class="lp-pill lp-pill-navy" data-filter-group="type" data-filter-val="Farm">Farm</button>
+
+      <span class="ms-auto lp-results-count d-none d-sm-block" id="resultsCount"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PROPERTY GRID
+════════════════════════════════════════════════════════════ -->
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="lp-section-title text-start fw-bold mb-0 h4">
+        {% if query %}Results for &ldquo;{{ query }}&rdquo;{% else %}Latest Listings{% endif %}
+      </h2>
+      {% if current_agent %}
+      <a href="{{ url_for('upload') }}" class="btn lp-btn-primary btn-sm px-3 d-none d-sm-inline-flex">
+        <i class="bi bi-plus-circle me-1"></i>Add Property
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- ── Skeleton grid: visible while JS fetches data ───────── -->
+    <div class="row g-4" id="skeletonGrid">
+      {% for _ in range(6) %}
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="lp-skeleton-card">
+          <div class="lp-skeleton lp-skeleton-img"></div>
+          <div class="lp-skeleton-body">
+            <div class="lp-skeleton lp-skeleton-price"></div>
+            <div class="lp-skeleton lp-skeleton-title"></div>
+            <div class="lp-skeleton lp-skeleton-location"></div>
+            <div class="lp-skeleton lp-skeleton-text"></div>
+            <div class="lp-skeleton lp-skeleton-text-sm"></div>
+            <div class="lp-skeleton-specs">
+              <div class="lp-skeleton lp-skeleton-spec"></div>
+              <div class="lp-skeleton lp-skeleton-spec"></div>
+              <div class="lp-skeleton lp-skeleton-spec"></div>
+            </div>
+            <div class="lp-skeleton lp-skeleton-btn"></div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ── Real grid: hidden until properties.js injects cards ── -->
+    <div class="row g-4 lp-hidden" id="propertyGrid"></div>
+
+    <!-- ── Empty: API returned zero results ─────────────────── -->
+    <div id="emptyState" class="text-center py-5 d-none">
+      <i class="bi bi-house-slash fs-1 text-muted"></i>
+      <p class="mt-3 text-muted" id="emptyStateMsg">No properties listed yet.</p>
+      {% if current_agent %}
+      <a href="{{ url_for('upload') }}" class="btn lp-btn-primary mt-2">
+        <i class="bi bi-plus-circle me-1"></i>Add the First Listing
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- ── Empty: filter pills hid all cards ────────────────── -->
+    <div id="emptyFilter" class="text-center py-5 d-none">
+      <i class="bi bi-funnel fs-1 text-muted"></i>
+      <p class="mt-3 text-muted">No properties match the selected filters.</p>
+      <button class="btn lp-btn-outline btn-sm" onclick="resetFilters()">Clear Filters</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BOND CALCULATOR CTA
+════════════════════════════════════════════════════════════ -->
+<section class="lp-cta-strip py-5">
+  <div class="container text-center">
+    <i class="bi bi-calculator-fill fs-1 text-white opacity-75 mb-3 d-block"></i>
+    <h2 class="text-white fw-bold mb-2">Plan Your Purchase</h2>
+    <p class="text-white opacity-85 mb-4 lead">
+      Use our free bond calculator to estimate monthly repayments in seconds.
+    </p>
+    <a href="{{ url_for('bond_calculator') }}" class="btn lp-btn-cta btn-lg px-5 shadow">
+      <i class="bi bi-calculator me-2"></i>Open Bond Calculator
+    </a>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WHY LARNEY PROPERTIES
+════════════════════════════════════════════════════════════ -->
+<section class="py-5 bg-white">
+  <div class="container">
+    <h2 class="lp-section-title fw-bold text-center mb-5">Why Larney Properties?</h2>
+
+    <div class="row g-4 justify-content-center">
+
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="lp-feature-box p-4 text-center bg-white shadow-sm h-100">
+          <i class="bi bi-patch-check-fill lp-feature-icon-big"></i>
+          <h5 class="fw-bold mb-2" style="color:var(--lp-navy);">Expert Local Knowledge</h5>
+          <p class="text-muted small mb-0">
+            Our team knows every neighbourhood intimately, giving you the edge whether you're buying, selling, or renting.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="lp-feature-box p-4 text-center bg-white shadow-sm h-100">
+          <i class="bi bi-people-fill lp-feature-icon-big"></i>
+          <h5 class="fw-bold mb-2" style="color:var(--lp-navy);">Trusted by Families</h5>
+          <p class="text-muted small mb-0">
+            Hundreds of happy clients have found their dream homes through Larney Properties — and we'd love to help you next.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="lp-feature-box p-4 text-center bg-white shadow-sm h-100">
+          <i class="bi bi-shield-fill-check lp-feature-icon-big"></i>
+          <h5 class="fw-bold mb-2" style="color:var(--lp-navy);">End-to-End Service</h5>
+          <p class="text-muted small mb-0">
+            From your first viewing to transfer day, we handle every step so you can focus on what matters most.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+{# Pass server-side context to the JS loader #}
+<script>
+  window.LP_QUERY    = {{ query | tojson }};
+  window.LP_IS_AGENT = {{ (current_agent is not none) | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/properties.js') }}"></script>
+
+<script>
+/* ── Animated stat counters (hero section) ───────────────────── */
+function countUp(el, target, duration) {
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    el.textContent = Math.floor(progress * target);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+const _statObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.querySelectorAll('.lp-stat-num').forEach(el => {
+        countUp(el, parseInt(el.dataset.target, 10), 1200);
+      });
+      _statObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+const _heroStats = document.querySelector('.lp-hero-stats');
+if (_heroStats) _statObserver.observe(_heroStats);
+</script>
+{% endblock %}
