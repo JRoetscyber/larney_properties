@@ -23,8 +23,7 @@
 
     <a class="navbar-brand fw-bold text-white d-flex align-items-center gap-2"
        href="{{ url_for('index') }}">
-      <i class="bi bi-buildings-fill" style="color:var(--lp-orange); font-size:1.3rem;"></i>
-      Larney Properties
+      <img src="{{ url_for('static', filename='assets/images/FullLogo_Transparent.png') }}" alt="Larney Properties Logo" class="lp-navbar-logo">
     </a>
 
     <button class="navbar-toggler border-0" type="button" id="navToggleBtn"
@@ -200,6 +199,12 @@
                 </a>
               </li>
               <li>
+                <a class="dropdown-item lp-dd-item {% if request.endpoint == 'agent_leads' %}active{% endif %}"
+                   href="{{ url_for('agent_leads') }}">
+                  <i class="bi bi-person-lines-fill me-2"></i>My Leads
+                </a>
+              </li>
+              <li>
                 <a class="dropdown-item lp-dd-item {% if request.endpoint == 'agent_profile' %}active{% endif %}"
                    href="{{ url_for('agent_profile') }}">
                   <i class="bi bi-person-fill me-2"></i>My Profile
@@ -271,7 +276,7 @@
       <!-- Brand col -->
       <div class="col-12 col-md-4">
         <p class="fw-bold fs-5 mb-2">
-          <i class="bi bi-buildings-fill me-2" style="color:var(--lp-orange);"></i>Larney Properties
+          <img src="{{ url_for('static', filename='assets/images/Logo.png') }}" alt="Larney Properties Logo" class="lp-navbar-logo">
         </p>
         <p class="small opacity-75 mb-3">
           Your trusted partner in buying, selling, and renting property across South Africa.
@@ -323,7 +328,17 @@
 
     <hr class="lp-footer-divider mt-4 mb-3" />
 
-    <img src>
+    <div class="d-flex justify-content-around align-items-center gap-4 flex-wrap">
+      <a href="https://www.betterbond.co.za" target="_blank" rel="noopener noreferrer">
+        <img src="{{ url_for('static', filename='assets/images/Logo.svg') }}" alt="Betterbond logo" class="lp-footer-logo">
+      </a>
+      <a href="https://theppra.org.za/" target="_blank" rel="noopener noreferrer">
+        <img src="{{ url_for('static', filename='assets/images/PPRA_logo.png') }}" alt="PPRA logo" class="lp-footer-logo">
+      </a>
+      <a href="https://www.property24.com/for-sale/agency/larney-properties/35968" target="_blank" rel="noopener noreferrer">
+        <img src="{{ url_for('static', filename='assets/images/property24_logo.svg') }}" alt="property24 logo" class="lp-footer-logo">
+      </a>
+    </div>
 
     <hr class="lp-footer-divider mt-4 mb-3" />
 

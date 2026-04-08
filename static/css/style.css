@@ -49,6 +49,12 @@ main { flex: 1; }
 }
 .lp-navbar .navbar-brand:hover { opacity: 0.88; }
 
+.lp-navbar-logo {
+  height: 100px;
+  width: auto;
+  max-width: 200px;
+}
+
 .lp-navbar .nav-link {
   color: rgba(255,255,255,0.78) !important;
   font-size: 0.875rem;
@@ -1096,18 +1102,29 @@ main { flex: 1; }
 }
 
 .lp-service-icon {
-  font-size: 3rem;
-  color: var(--lp-orange);
-  background: linear-gradient(135deg, rgba(241,91,34,0.1), rgba(247,145,29,0.1));
   border-radius: 50%;
-  width: 80px;
-  height: 80px;
+  width: 125px;
+  height: 125px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
   position: relative;
   transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.lp-service-icon-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 80%;
+}
+
+.lp-service-logo-img {
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+  filter: grayscale(25%) brightness(5) contrast(2);
 }
 
 .lp-service-icon::before {
@@ -1123,7 +1140,6 @@ main { flex: 1; }
 
 .lp-service-card:hover .lp-service-icon {
   transform: scale(1.1);
-  color: #1b2656;
 }
 
 .lp-service-icon-white {
@@ -1177,4 +1193,16 @@ main { flex: 1; }
 .lp-service-btn-mustard:hover {
   background-color: var(--lp-light);
   color: #002c5e;
+}
+
+/* --- Footer logos ------------------------------------------ */
+.lp-footer-logo {
+  max-height: 50px;
+  filter: grayscale(70%) brightness(0.25) contrast(1.2);
+  opacity: 0.6;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.lp-footer-logo:hover {
+  opacity: 1;
 }

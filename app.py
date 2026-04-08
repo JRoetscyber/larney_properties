@@ -23,6 +23,13 @@ ALLOWED_EXTENSIONS   = {"png", "jpg", "jpeg", "webp"}
 app.config["UPLOAD_FOLDER"]      = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
 
+# SMTP Configuration for sending emails
+app.config["MAIL_SERVER"]   = os.environ.get("MAIL_SERVER")   or "smtp.gmail.com"
+app.config["MAIL_PORT"]     = int(os.environ.get("MAIL_PORT") or 587)
+app.config["MAIL_USE_TLS"]  = os.environ.get("MAIL_USE_TLS")  or True
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME") or "your_email@gmail.com" # REPLACE WITH YOUR GMAIL
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD") or "your_password" # REPLACE WITH YOUR GMAIL APP PASSWORD
+app.config["ADMIN_EMAIL"]   = os.environ.get("ADMIN_EMAIL")   or "admin_email@example.com" # REPLACE WITH ADMIN EMAIL
 
 # ── Database helpers ──────────────────────────────────────────────────────────
 def get_db():
@@ -30,6 +37,27 @@ def get_db():
         g.db = sqlite3.connect(DATABASE)
         g.db.row_factory = sqlite3.Row
     return g.db
+
+import smtplib, ssl
+
+def send_email(recipient, subject, body):
+    sender_email    = app.config["MAIL_USERNAME"]
+    sender_password = app.config["MAIL_PASSWORD"]
+
+    if not sender_email or sender_email == "your_email@gmail.com":
+        app.logger.warning(f"Email not sent to {recipient}: MAIL_USERNAME not configured.")
+        return
+
+    message = f"Subject: {subject}\n\n{body}"
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP(app.config["MAIL_SERVER"], app.config["MAIL_PORT"]) as server:
+            server.starttls(context=context)
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, recipient, message)
+            app.logger.info(f"Email sent to {recipient} with subject '{subject}'")
+    except Exception as e:
+        app.logger.error(f"Failed to send email to {recipient}: {e}")
 
 
 @app.teardown_appcontext
@@ -139,9 +167,25 @@ def migrate_db():
                 notes           TEXT DEFAULT '',
                 heard_from      TEXT DEFAULT '',
                 status          TEXT DEFAULT 'New',
+                agent_id        INTEGER,
+                assigned_at     TIMESTAMP,
+                pending_removal INTEGER DEFAULT 0,
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Add agent_id and assigned_at to seller_leads if not exists
+        try:
+            db.execute("ALTER TABLE seller_leads ADD COLUMN agent_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE seller_leads ADD COLUMN assigned_at TIMESTAMP")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE seller_leads ADD COLUMN pending_removal INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
         
          # Home price estimation leads
         db.execute("""
@@ -156,9 +200,25 @@ def migrate_db():
                 city            TEXT DEFAULT '',
                 property_type   TEXT DEFAULT 'House',
                 status          TEXT DEFAULT 'New',
+                agent_id        INTEGER,
+                assigned_at     TIMESTAMP,
+                pending_removal INTEGER DEFAULT 0,
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Add agent_id and assigned_at to Home_price_estimation_leads if not exists
+        try:
+            db.execute("ALTER TABLE Home_price_estimation_leads ADD COLUMN agent_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE Home_price_estimation_leads ADD COLUMN assigned_at TIMESTAMP")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            db.execute("ALTER TABLE Home_price_estimation_leads ADD COLUMN pending_removal INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
          
          #property_images gallery table
         db.execute("""
@@ -1137,6 +1197,31 @@ def sell():
               asking_price, occupied, bond_outstanding, notes, heard_from, sast))
         db.commit()
         flash("Thank you! We will be in touch with you shortly.", "success")
+
+        # Notify admin about new seller lead
+        admin_email = app.config["ADMIN_EMAIL"]
+        subject     = f"New Seller Lead: {full_name} ({property_type} at {address})"
+        body        = (f"A new seller lead has been submitted:\n\n"
+                       f"Name: {full_name}\n"
+                       f"Email: {email}\n"
+                       f"Phone: {phone}\n"
+                       f"Contact Time: {contact_time or 'Any time'}\n"
+                       f"Address: {address}, {suburb}, {city}\n"
+                       f"Property Type: {property_type}\n"
+                       f"Bedrooms: {bedrooms}\n"
+                       f"Bathrooms: {bathrooms}\n"
+                       f"Garages: {garages}\n"
+                       f"Size (sqm): {size_sqm}\n"
+                       f"Erf Size (sqm): {erf_size_sqm}\n"
+                       f"Asking Price: {asking_price}\n"
+                       f"Occupied: {occupied}\n"
+                       f"Bond Outstanding: {bond_outstanding}\n"
+                       f"Notes: {notes}\n"
+                       f"Heard From: {heard_from}\n"
+                       f"Submitted On: {sast}\n"
+                       f"\nView lead in admin panel: {url_for('admin_leads', _external=True)}")
+        send_email(admin_email, subject, body)
+
         return redirect(url_for("sell"))
 
     return render_template("sell.html", form={})
@@ -1177,6 +1262,21 @@ def HPE():
               property_type, status, sast))
         db.commit()
         flash("Thank you! We will be in touch with you shortly.", "success")
+
+        # Notify admin about new HPE lead
+        admin_email = app.config["ADMIN_EMAIL"]
+        subject     = f"New HPE Lead: {full_name} ({property_type} at {address})"
+        body        = (f"A new Home Price Estimation lead has been submitted:\n\n"
+                       f"Name: {full_name}\n"
+                       f"Email: {email}\n"
+                       f"Phone: {phone}\n"
+                       f"Contact Time: {contact_time or 'Any time'}\n"
+                       f"Address: {address}, {suburb}, {city}\n"
+                       f"Property Type: {property_type}\n"
+                       f"Submitted On: {sast}\n"
+                       f"\nView lead in admin panel: {url_for('admin_leads', _external=True)}")
+        send_email(admin_email, subject, body)
+
         return redirect(url_for("HPE"))
 
     return render_template("Home_price_estimation.html", form={})
@@ -1188,13 +1288,19 @@ def admin_leads():
     db    = get_db()
     leads = db.execute(
         """
-        SELECT id, full_name, email, phone, contact_time, address, suburb, city, property_type, status, created_at, 'seller' AS lead_type FROM seller_leads
+        SELECT sl.id, sl.full_name, sl.email, sl.phone, sl.contact_time, sl.address, sl.suburb, sl.city, sl.property_type, sl.status, sl.created_at, 'seller' AS lead_type, sl.agent_id, a.full_name AS assigned_agent_name, sl.pending_removal
+        FROM seller_leads sl
+        LEFT JOIN agents a ON sl.agent_id = a.id
         UNION ALL
-        SELECT id, full_name, email, phone, contact_time, address, suburb, city, property_type, status, created_at, 'hpe' AS lead_type FROM Home_price_estimation_leads
-        ORDER BY created_at DESC
+        SELECT hpe.id, hpe.full_name, hpe.email, hpe.phone, hpe.contact_time, hpe.address, hpe.suburb, hpe.city, hpe.property_type, hpe.status, hpe.created_at, 'hpe' AS lead_type, hpe.agent_id, a.full_name AS assigned_agent_name, hpe.pending_removal
+        FROM Home_price_estimation_leads hpe
+        LEFT JOIN agents a ON hpe.agent_id = a.id
+        ORDER BY 11 DESC
         """
     ).fetchall()
-    return render_template("admin_leads.html", leads=leads)
+    
+    agents = db.execute("SELECT id, full_name, email FROM agents ORDER BY full_name").fetchall()
+    return render_template("admin_leads.html", leads=leads, agents=agents)
 
 
 @app.route("/admin/leads/<int:lead_id>/status", methods=["POST"])
@@ -1208,6 +1314,136 @@ def admin_lead_status(lead_id):
     elif lead_type == 'hpe':
         db.execute("UPDATE Home_price_estimation_leads SET status = ? WHERE id = ?", (status, lead_id))
     db.commit()
+    return redirect(url_for("admin_leads"))
+
+
+@app.route("/admin/leads/<int:lead_id>/assign", methods=["POST"])
+@admin_required
+def admin_assign_lead(lead_id):
+    agent_id  = request.form.get("agent_id")
+    lead_type = request.form.get("lead_type")
+    db        = get_db()
+    
+    # Get current time for assigned_at timestamp
+    from datetime import datetime, timezone, timedelta
+    sast = datetime.now(timezone(timedelta(hours=2))).strftime("%Y-%m-%d %H:%M:%S")
+
+    agent_data = None
+    if agent_id: # If an agent was selected (not 'Unassigned')
+        agent_data = db.execute(
+            "SELECT full_name, email FROM agents WHERE id = ?", (agent_id,)
+        ).fetchone()
+
+    lead_details = None
+    if lead_type == 'seller':
+        lead_details = db.execute(
+            "SELECT * FROM seller_leads WHERE id = ?", (lead_id,)
+        ).fetchone()
+        if lead_details:
+            db.execute(
+                "UPDATE seller_leads SET agent_id = ?, assigned_at = ? WHERE id = ?",
+                (agent_id if agent_id else None, sast if agent_id else None, lead_id),
+            )
+            db.commit()
+            flash(f"Seller lead '{lead_details['full_name']}' assigned successfully.", "success")
+            
+            if agent_data:
+                subject = f"New Seller Lead Assigned: {lead_details['full_name']}"
+                body = (f"Hello {agent_data['full_name']},\n\n"
+                        f"A new seller lead has been assigned to you:\n\n"
+                        f"Client Name: {lead_details['full_name']}\n"
+                        f"Client Email: {lead_details['email']}\n"
+                        f"Client Phone: {lead_details['phone']}\n"
+                        f"Property Address: {lead_details['address']}\n"
+                        f"Property Type: {lead_details['property_type']}\n"
+                        f"Status: {lead_details['status']}\n"
+                        f"Assigned On: {sast}\n"
+                        f"\nLog in to the admin panel to view full details and manage this lead: {url_for('admin_leads', _external=True)}")
+                send_email(agent_data['email'], subject, body)
+
+    elif lead_type == 'hpe':
+        lead_details = db.execute(
+            "SELECT * FROM Home_price_estimation_leads WHERE id = ?", (lead_id,)
+        ).fetchone()
+        if lead_details:
+            db.execute(
+                "UPDATE Home_price_estimation_leads SET agent_id = ?, assigned_at = ? WHERE id = ?",
+                (agent_id if agent_id else None, sast if agent_id else None, lead_id),
+            )
+            db.commit()
+            flash(f"Home Price Estimation lead '{lead_details['full_name']}' assigned successfully.", "success")
+
+            if agent_data:
+                subject = f"New HPE Lead Assigned: {lead_details['full_name']}"
+                body = (f"Hello {agent_data['full_name']},\n\n"
+                        f"A new Home Price Estimation lead has been assigned to you:\n\n"
+                        f"Client Name: {lead_details['full_name']}\n"
+                        f"Client Email: {lead_details['email']}\n"
+                        f"Client Phone: {lead_details['phone']}\n"
+                        f"Property Address: {lead_details['address']}\n"
+                        f"Property Type: {lead_details['property_type']}\n"
+                        f"Status: {lead_details['status']}\n"
+                        f"Assigned On: {sast}\n"
+                        f"\nLog in to the admin panel to view full details and manage this lead: {url_for('admin_leads', _external=True)}")
+                send_email(agent_data['email'], subject, body)
+
+    else:
+        flash("Invalid lead type specified for assignment.", "danger")
+
+    return redirect(url_for("admin_leads"))
+
+
+@app.route("/admin/leads/<int:lead_id>/confirm_deletion", methods=["POST"])
+@admin_required
+def admin_confirm_deletion(lead_id):
+    lead_type = request.form.get("lead_type")
+    db = get_db()
+    lead_name = ""
+
+    table_name = ""
+    if lead_type == 'seller':
+        table_name = "seller_leads"
+    elif lead_type == 'hpe':
+        table_name = "Home_price_estimation_leads"
+    else:
+        flash("Invalid lead type specified for deletion.", "danger")
+        return redirect(url_for("admin_leads"))
+
+    lead = db.execute(f"SELECT full_name FROM {table_name} WHERE id = ?", (lead_id,)).fetchone()
+    if lead:
+        lead_name = lead["full_name"]
+        db.execute(f"DELETE FROM {table_name} WHERE id = ?", (lead_id,))
+        db.commit()
+        flash(f"{lead_type.capitalize()} lead '{lead_name}' successfully deleted (confirmed by admin).", "success")
+    else:
+        flash(f"{lead_type.capitalize()} lead not found.", "danger")
+
+    return redirect(url_for("admin_leads"))
+
+
+@app.route("/admin/leads/<int:lead_id>/unmark_removal", methods=["POST"])
+@admin_required
+def admin_unmark_removal(lead_id):
+    lead_type = request.form.get("lead_type")
+    db = get_db()
+
+    table_name = ""
+    if lead_type == 'seller':
+        table_name = "seller_leads"
+    elif lead_type == 'hpe':
+        table_name = "Home_price_estimation_leads"
+    else:
+        flash("Invalid lead type.", "danger")
+        return redirect(url_for("admin_leads"))
+
+    lead = db.execute(f"SELECT full_name FROM {table_name} WHERE id = ?", (lead_id,)).fetchone()
+    if lead:
+        db.execute(f"UPDATE {table_name} SET pending_removal = 0 WHERE id = ?", (lead_id,))
+        db.commit()
+        flash(f"Lead '{lead['full_name']}' unmarked for removal.", "info")
+    else:
+        flash(f"{lead_type.capitalize()} lead not found.", "danger")
+
     return redirect(url_for("admin_leads"))
 
 
@@ -1249,6 +1485,178 @@ def agents_page():
         "SELECT id, full_name, bio, phone, email, profile_image FROM agents ORDER BY full_name"
     ).fetchall()
     return render_template("agents.html", agents=agents_list)
+
+
+@app.route("/agent/leads")
+@login_required
+def agent_leads():
+    db = get_db()
+    agent_id = session.get("agent_id")
+
+    leads = db.execute(
+        """
+        SELECT sl.id, sl.full_name, sl.email, sl.phone, sl.contact_time, sl.address, sl.suburb, sl.city, sl.property_type, sl.status, sl.created_at, sl.pending_removal, 'seller' AS lead_type, sl.agent_id, a.full_name AS assigned_agent_name
+        FROM seller_leads sl
+        LEFT JOIN agents a ON sl.agent_id = a.id
+        WHERE sl.agent_id = ?
+        UNION ALL
+        SELECT hpe.id, hpe.full_name, hpe.email, hpe.phone, hpe.contact_time, hpe.address, hpe.suburb, hpe.city, hpe.property_type, hpe.status, hpe.created_at, hpe.pending_removal, 'hpe' AS lead_type, hpe.agent_id, a.full_name AS assigned_agent_name
+        FROM Home_price_estimation_leads hpe
+        LEFT JOIN agents a ON hpe.agent_id = a.id
+        WHERE hpe.agent_id = ?
+        ORDER BY 11 DESC
+        """,
+        (agent_id, agent_id)
+    ).fetchall()
+
+    # Calculate statistics for the agent's leads
+    stats = {
+        "total_assigned": len(leads),
+        "new_leads":      0,
+        "contacted_leads": 0,
+        "mandated_leads":  0,
+        "closed_leads":    0,
+        "not_interested_leads": 0,
+        "pending_removal": 0,
+    }
+    for lead in leads:
+        if lead['status'] == 'New':
+            stats["new_leads"] += 1
+        elif lead['status'] == 'Contacted':
+            stats["contacted_leads"] += 1
+        elif lead['status'] == 'Mandated':
+            stats["mandated_leads"] += 1
+        elif lead['status'] == 'Closed':
+            stats["closed_leads"] += 1
+        elif lead['status'] == 'Not Interested':
+            stats["not_interested_leads"] += 1
+        if lead['pending_removal'] == 1:
+            stats["pending_removal"] += 1
+    
+    return render_template("agent_leads.html", leads=leads, stats=stats)
+
+
+@app.route("/agent/leads/<int:lead_id>/status", methods=["POST"])
+@login_required
+def agent_lead_status(lead_id):
+    status    = request.form.get("status", "New")
+    lead_type = request.form.get("lead_type")
+    agent_id  = session.get("agent_id")
+    db        = get_db()
+
+    table_name = ""
+    if lead_type == 'seller':
+        table_name = "seller_leads"
+    elif lead_type == 'hpe':
+        table_name = "Home_price_estimation_leads"
+    else:
+        flash("Invalid lead type.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    # Verify lead ownership
+    lead = db.execute(
+        f"SELECT id, full_name FROM {table_name} WHERE id = ? AND agent_id = ?",
+        (lead_id, agent_id)
+    ).fetchone()
+
+    if not lead:
+        flash("Lead not found or not assigned to you.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    db.execute(
+        f"UPDATE {table_name} SET status = ? WHERE id = ?",
+        (status, lead_id)
+    )
+    db.commit()
+    flash(f"{lead['full_name']}'s status updated to '{status}'.", "success")
+    return redirect(url_for("agent_leads"))
+
+
+    return redirect(url_for("agent_leads"))
+
+
+@app.route("/agent/leads/<int:lead_id>/mark_removal", methods=["POST"])
+@login_required
+def agent_mark_removal(lead_id):
+    lead_type = request.form.get("lead_type")
+    agent_id  = session.get("agent_id")
+    db        = get_db()
+
+    table_name = ""
+    if lead_type == 'seller':
+        table_name = "seller_leads"
+    elif lead_type == 'hpe':
+        table_name = "Home_price_estimation_leads"
+    else:
+        flash("Invalid lead type.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    # Verify lead ownership
+    lead = db.execute(
+        f"SELECT id, full_name FROM {table_name} WHERE id = ? AND agent_id = ?",
+        (lead_id, agent_id)
+    ).fetchone()
+
+    if not lead:
+        flash("Lead not found or not assigned to you.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    db.execute(
+        f"UPDATE {table_name} SET pending_removal = 1 WHERE id = ?",
+        (lead_id,)
+    )
+    db.commit()
+    flash(f"Lead '{lead['full_name']}' marked for removal. An admin will review your request.", "info")
+    return redirect(url_for("agent_leads"))
+
+
+    return redirect(url_for("agent_leads"))
+
+
+@app.route("/agent/leads/<int:lead_id>/unassign", methods=["POST"])
+@login_required
+def agent_unassign_lead(lead_id):
+    lead_type = request.form.get("lead_type")
+    agent_id  = session.get("agent_id")
+    db        = get_db()
+    
+    table_name = ""
+    if lead_type == 'seller':
+        table_name = "seller_leads"
+    elif lead_type == 'hpe':
+        table_name = "Home_price_estimation_leads"
+    else:
+        flash("Invalid lead type.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    # Verify lead ownership
+    lead = db.execute(
+        f"SELECT id, full_name FROM {table_name} WHERE id = ? AND agent_id = ?",
+        (lead_id, agent_id)
+    ).fetchone()
+
+    if not lead:
+        flash("Lead not found or not assigned to you.", "danger")
+        return redirect(url_for("agent_leads"))
+
+    db.execute(
+        f"UPDATE {table_name} SET agent_id = NULL, assigned_at = NULL, pending_removal = 0 WHERE id = ?",
+        (lead_id,)
+    )
+    db.commit()
+    flash(f"Lead '{lead['full_name']}' has been unassigned and returned to the admin pool.", "info")
+
+    # Notify admin about unassigned lead
+    admin_email = app.config["ADMIN_EMAIL"]
+    current_agent = session.get("agent_username", "An Agent")
+    subject     = f"Lead Unassigned: {lead['full_name']} ({lead_type.capitalize()})"
+    body        = (f"{current_agent} has unassigned the lead '{lead['full_name']}' "
+                   f"({lead_type.capitalize()} lead ID: {lead_id}).\n\n"
+                   f"The lead has been returned to the admin pool and is now available for re-assignment.\n\n"
+                   f"View lead in admin panel: {url_for('admin_leads', _external=True)}")
+    send_email(admin_email, subject, body)
+
+    return redirect(url_for("agent_leads"))
 
 
 @app.route("/popia")

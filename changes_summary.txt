@@ -30,6 +30,59 @@ Here's a summary of the changes made to the web application:
     *   **Change:** Relocated and re-indented the `agents_page` function to its correct top-level scope within `app.py`.
     *   **Reason:** To resolve the `BuildError` caused by Flask being unable to find the `agents_page` endpoint, ensuring the "Our Agents" page functions correctly.
 
+*   **New Feature: Admin Notification for New Leads & Agent Assignment:**
+    *   **Database Schema Update:** Added `agent_id` (INTEGER, nullable) and `assigned_at` (TIMESTAMP, nullable) columns to both `seller_leads` and `Home_price_estimation_leads` tables by *modifying the `CREATE TABLE` statements within `migrate_db()`*.
+    *   **Email Configuration:** Added SMTP configuration (MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USERNAME, MAIL_PASSWORD, ADMIN_EMAIL) to `app.config`, using environment variables or default placeholders.
+    *   **Email Utility:** Implemented a `send_email` function using `smtplib` to send emails.
+    *   **Admin Notification:** Modified `sell()` and `HPE()` routes to call `send_email` to notify the `ADMIN_EMAIL` about new lead submissions, including lead details and a link to the admin panel.
+    *   **Agent Assignment Route:** Added a new `admin_assign_lead` route (`/admin/leads/<int:lead_id>/assign`). This route handles POST requests, updates the `agent_id` and `assigned_at` for the specified lead in the correct table, and sends an email notification to the assigned agent with lead details.
+    *   **Admin Leads Query Enhancement:** Updated the `admin_leads()` function to fetch all agents and include the `agent_id` and `assigned_agent_name` in the lead queries, joining with the `agents` table.
+    *   **Reason:** To provide a robust system for managing leads, including automated notifications to the admin for new leads and a mechanism for admins to assign leads to specific agents, who then receive their own notifications.
+
+*   **Issue (Fix for `sqlite3.OperationalError: no such column` in `migrate_db()`):** After the initial database schema update in `migrate_db()`, existing `seller_leads` and `Home_price_estimation_leads` tables in the `properties.db` file did not get the new `agent_id` and `assigned_at` columns automatically, leading to a "no such column" error when querying them.
+    *   **Change:** Added explicit `ALTER TABLE` statements within `migrate_db()` to safely add the `agent_id INTEGER` and `assigned_at TIMESTAMP` columns to both `seller_leads` and `Home_price_estimation_leads` tables. These `ALTER TABLE` commands are wrapped in `try...except sqlite3.OperationalError` blocks to prevent errors if the columns already exist.
+    *   **Reason:** To correctly apply the new schema changes (adding `agent_id` and `assigned_at` columns) to existing database tables without requiring manual database resets, thus resolving the `sqlite3.OperationalError`.
+
+*   **Issue (Fix for `sqlite3.OperationalError: 1st ORDER BY term does not match any column`):** The `ORDER BY created_at DESC` clause in the `admin_leads()` `UNION ALL` query caused an error because SQLite sometimes requires referring to columns by their positional index in such cases.
+    *   **Change:** Modified the `ORDER BY` clause in `admin_leads()` from `ORDER BY created_at DESC` to `ORDER BY 11 DESC`, where '11' is the column index for `created_at` in the combined result set.
+    *   **Reason:** To resolve the `sqlite3.OperationalError` and ensure that leads are correctly sorted by their creation date in the admin panel.
+
+*   **New Feature: Agent's View of Assigned Leads:**
+    *   **New Route `/agent/leads`:** Created a new Flask route `/agent/leads` decorated with `@login_required`. This route fetches all leads (both seller and HPE) assigned to the currently logged-in agent using a `UNION ALL` query and passes them to a new template.
+    *   **New Template `templates/agent_leads.html`:** Created an HTML template to display the leads assigned to an agent. This template is designed for agents to view their leads, showing relevant details without administrative controls.
+    *   **Navigation Link:** Added a "My Leads" navigation link to the agent's dropdown menu in `templates/base.html`, linking to `url_for('agent_leads')`.
+    *   **Reason:** To provide agents with a dedicated interface to view and manage the leads that have been assigned to them by an administrator.
+
+*   **New Feature: Agent Status Update & Soft Delete with Admin Confirmation:**
+    *   **Database Schema Update:** Added `pending_removal INTEGER DEFAULT 0` column to both `seller_leads` and `Home_price_estimation_leads` tables in `migrate_db()`, including explicit `ALTER TABLE` statements for existing tables.
+    *   **Agent Lead Status Update Route:** Added `/agent/leads/<int:lead_id>/status` route. This `POST` route allows agents to update the status of their assigned leads after verifying ownership.
+    *   **Agent Mark for Removal Route (Soft Delete):** Added `/agent/leads/<int:lead_id>/mark_removal` route. This `POST` route allows agents to mark their assigned leads for removal by setting `pending_removal = 1`, also after verifying ownership.
+    *   **Admin Confirm Deletion Route:** Added `/admin/leads/<int:lead_id>/confirm_deletion` route. This `POST` route is only accessible by admins and performs the final, hard deletion of a lead that has been marked for removal by an agent.
+    *   **Admin Unmark for Removal Route:** Added `/admin/leads/<int:lead_id>/unmark_removal` route. This `POST` route allows admins to revert a lead's `pending_removal` status back to `0`.
+    *   **`templates/agent_leads.html` Updates:**
+        *   Added a status dropdown for each lead, allowing agents to update their lead's status.
+        *   Added a "Mark for Removal" button (if not already pending removal) which triggers the soft delete. If a lead is already pending removal, a message indicating this is displayed instead.
+    *   **`templates/admin_leads.html` Updates:**
+        *   Modified the leads display to show a "Pending Removal" badge if `pending_removal == 1`.
+        *   Adjusted the delete buttons:
+            *   For `pending_removal == 1`, the "Confirm Deletion" button text was changed to "Yes, Delete Lead" and "Unmark for Removal" button text was changed to "No, Keep Lead".
+            *   If `pending_removal == 0`, the original "Delete Lead" button (linking to `admin_delete_lead` for direct admin deletion) is shown.
+    *   **Reason:** To provide agents with granular control over their leads' status and a soft-delete mechanism, ensuring that lead removal requires administrative oversight, and to provide admins with clear "yes/no" options for removal requests.
+
+*   **New Feature: Agent "Unassign Lead" Button:**
+    *   **New Route `/agent/leads/<int:lead_id>/unassign`:** Created a new Flask route `/agent/leads/<int:lead_id>/unassign` decorated with `@login_required`. This `POST` route allows an agent to unassign a lead from themselves. It sets the `agent_id` and `assigned_at` columns to `NULL`, `pending_removal` to `0`, and notifies the admin via email that the lead has been unassigned.
+    *   **`templates/agent_leads.html` Update:** Added an "Unassign Lead" button to each lead card. This button, when clicked, triggers the new `agent_unassign_lead` route and includes a JavaScript confirmation dialog.
+    *   **Reason:** To provide agents with a mechanism to return leads they no longer wish to work on to the general pool for re-assignment by an administrator, maintaining administrative oversight.
+
+*   **New Feature: Agent "My Leads" Page Insights:**
+    *   **`app.py` (`agent_leads()` route) Update:** Modified the `agent_leads()` route to calculate and pass lead statistics (total assigned, counts by status, pending removal) for the logged-in agent to the template.
+    *   **`templates/agent_leads.html` Update:** Added a new summary section at the top of the `agent_leads.html` page to visually display these calculated lead statistics.
+    *   **Reason:** To provide agents with a quick overview and data insights into their assigned lead portfolio.
+
+*   **Issue (Fix for `IndexError: No item with that key 'pending_removal'`):** The `agent_leads()` query in `app.py` was trying to access the `pending_removal` column from the `lead` object, but this column was not being selected in the `UNION ALL` query, causing an `IndexError`.
+    *   **Change:** Modified the `UNION ALL` query within the `agent_leads()` function to explicitly select the `sl.pending_removal` and `hpe.pending_removal` columns.
+    *   **Reason:** To ensure that the `pending_removal` column is available in the `lead` object within the `agent_leads.html` template, thus resolving the `IndexError`.
+
 **2. templates/base.html**
 
 *   **Issue:** The navigation link for "Home Price Estimation" was commented out, making it inaccessible to users.
@@ -52,7 +105,7 @@ Here's a summary of the changes made to the web application:
 
 *   **Issue:** The admin leads display did not differentiate between lead types, and fields specific to seller leads were always displayed, even for HPE leads (which lack those fields). The status update form also did not pass the `lead_type`.
     *   **Change:**
-        *   Added a conditional badge `{% if lead['lead_type'] == 'hpe' %}<span class="badge bg-info ms-2">HPE Lead</span>{% endif %}` next to the lead's creation timestamp to visually identify HPE leads.
+        *   Added a conditional badge `{% if lead['lead_type'] == 'hpe' %}<span class="badge bg-info ms-2">HPE Lead</span>{% else %}<span class="badge bg-success ms-2">Seller Lead</span>{% endif %}` next to the lead's creation timestamp to visually identify lead types.
         *   Wrapped seller-specific property detail fields (like `heard_from`, `bedrooms`, `bathrooms`, `garages`, `size_sqm`, `asking_price`, `occupied`, `bond_outstanding`) within an `{% if lead['lead_type'] == 'seller' %}` block.
         *   Added a hidden input field `<input type="hidden" name="lead_type" value="{{ lead['lead_type'] }}" />` inside the status update form.
     *   **Reason:** To provide clear visual distinction between lead types, ensure that only relevant information is displayed for each lead, and correctly pass the lead type to the backend for status updates.
@@ -62,3 +115,9 @@ Here's a summary of the changes made to the web application:
     *   The form submits to the new `admin_delete_lead` route, passing the necessary `lead_id` and `lead_type`.
     *   Includes a JavaScript `confirm()` dialog for user confirmation before deletion.
     *   **Reason:** To provide a user interface element to trigger the lead deletion functionality implemented in `app.py`.
+
+*   **New Feature: Assign Agent Dropdown:**
+    *   Added a new section for "Assigned Agent" with a dropdown (`<select>`) for each lead.
+    *   The dropdown lists all available agents fetched from the database, and displays "Unassigned" if no agent is currently assigned.
+    *   The selection automatically triggers a POST submission to the new `admin_assign_lead` route, passing `lead_id`, `lead_type`, and the selected `agent_id`.
+    *   **Reason:** To provide administrators with an interface to assign leads to specific agents.
