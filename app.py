@@ -1130,6 +1130,7 @@ def admin_leads():
     db    = get_db()
     leads = db.execute(
         "SELECT * FROM seller_leads ORDER BY created_at DESC"
+        #"SELECT * FROM Home_price_estimation_leads ORDER BY created_at"
     ).fetchall()
     return render_template("admin_leads.html", leads=leads)
 

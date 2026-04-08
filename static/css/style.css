@@ -1038,3 +1038,143 @@ main { flex: 1; }
   .lp-stat-pill { padding: 8px 12px; }
   .lp-stat-num { font-size: 1.4rem; }
 }
+
+/* --- Services Panel --------------------------------------- */
+.lp-service-card {
+  border-radius: var(--lp-radius);
+  box-shadow: var(--lp-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.lp-service-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+
+.lp-service-card-orange:hover {
+  border-top-color: #1b2656;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(15px);
+}
+
+.lp-service-card-orange {
+  border-top: 4px solid var(--lp-orange);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-service-card-orange::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(241,91,34,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(40px, -40px);
+  pointer-events: none;
+}
+
+.lp-service-card-orange::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(247,145,29,0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-30px, 30px);
+  pointer-events: none;
+}
+
+.lp-service-card-dark {
+  background-color: #002c5e;
+}
+
+.lp-service-icon {
+  font-size: 3rem;
+  color: var(--lp-orange);
+  background: linear-gradient(135deg, rgba(241,91,34,0.1), rgba(247,145,29,0.1));
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.lp-service-icon::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1b2656, #1b2656);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.lp-service-card:hover .lp-service-icon {
+  transform: scale(1.1);
+  color: #1b2656;
+}
+
+.lp-service-icon-white {
+  color: white;
+}
+
+.lp-service-title {
+  color: var(--lp-navy);
+  font-weight: 600;
+}
+
+.lp-service-title-white {
+  color: white;
+}
+
+.lp-service-text {
+  color: var(--lp-text);
+  text-align: center;
+}
+
+.lp-service-text-white {
+  color: rgba(255,255,255,0.85);
+}
+
+.lp-service-btn {
+  border-radius: 25px;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.lp-service-btn-orange {
+  background-color: transparent;
+  border: 2px solid var(--lp-orange);
+  color: var(--lp-orange);
+}
+
+.lp-service-btn-orange:hover {
+  background-color: #1b2656;
+  color: white;
+  border-color: #1b2656;
+}
+
+.lp-service-btn-mustard {
+  background-color: var(--lp-mustard);
+  color: var(--lp-navy);
+  border: none;
+}
+
+.lp-service-btn-mustard:hover {
+  background-color: var(--lp-light);
+  color: #002c5e;
+}

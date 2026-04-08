@@ -61,6 +61,12 @@
             <i class="bi bi-tag-fill me-1 opacity-75"></i>Sell Your Property
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'cma' %}active{% endif %}"
+             href="{{ url_for('sell') }}">
+            <i class="bi bi-graph-up-arrow me-1 opacity-75"></i>Home Price Estimation
+          </a>
+        </li>
 
         <!-- Agent only -->
         {% if current_agent %}
@@ -74,12 +80,6 @@
           <a class="nav-link {% if request.endpoint == 'upload' %}active{% endif %}"
              href="{{ url_for('upload') }}">
             <i class="bi bi-plus-circle me-1 opacity-75"></i>List Property
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint == 'cma' %}active{% endif %}"
-             href="{{ url_for('cma') }}">
-            <i class="bi bi-graph-up-arrow me-1 opacity-75"></i>Home Price Estimation
           </a>
         </li>
 

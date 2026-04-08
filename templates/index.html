@@ -158,18 +158,57 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
-     BOND CALCULATOR CTA
+     SERVICE SECTION
 ════════════════════════════════════════════════════════════ -->
 <section class="lp-cta-strip py-5">
-  <div class="container text-center">
-    <i class="bi bi-calculator-fill fs-1 text-white opacity-75 mb-3 d-block"></i>
-    <h2 class="text-white fw-bold mb-2">Plan Your Purchase</h2>
-    <p class="text-white opacity-85 mb-4 lead">
-      Use our free bond calculator to estimate monthly repayments in seconds.
-    </p>
-    <a href="{{ url_for('bond_calculator') }}" class="btn lp-btn-cta btn-lg px-5 shadow">
-      <i class="bi bi-calculator me-2"></i>Open Bond Calculator
-    </a>
+  <div class="container">
+    <div class="row g-4 justify-content-center">
+      <!-- Card 1: Home Price Estimation -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 lp-service-card lp-service-card-orange">
+          <div class="card-body d-flex flex-column">
+            <div class="text-center mb-3">
+              <i class="bi bi-graph-up-arrow lp-service-icon"></i>
+            </div>
+            <h5 class="card-title text-center lp-service-title">Home Price Estimation</h5>
+            <p class="card-text flex-grow-1 lp-service-text">Get an accurate, data-driven valuation report to understand your property's current market value.</p>
+            <div class="text-center mt-auto">
+              <a href="#" class="btn lp-service-btn lp-service-btn-orange">Get Estimation</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Card 2: Sell Your Property -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 lp-service-card lp-service-card-orange">
+          <div class="card-body d-flex flex-column">
+            <div class="text-center mb-3">
+              <i class="bi bi-house-door lp-service-icon"></i>
+            </div>
+            <h5 class="card-title text-center lp-service-title">Sell Your Property</h5>
+            <p class="card-text flex-grow-1 lp-service-text">Ready to move? List your home with Larney Properties and connect with the right buyers quickly.</p>
+            <div class="text-center mt-auto">
+              <a href="{{ url_for('sell') }}" class="btn lp-service-btn lp-service-btn-orange">List With Us</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Card 3: BetterBond -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 lp-service-card lp-service-card-dark">
+          <div class="card-body d-flex flex-column">
+            <div class="text-center mb-3">
+              <i class="bi bi-calculator lp-service-icon lp-service-icon-white"></i>
+            </div>
+            <h5 class="card-title text-center lp-service-title lp-service-title-white">BetterBond</h5>
+            <p class="card-text flex-grow-1 lp-service-text lp-service-text-white">Plan your purchase. Use our free calculator to estimate monthly repayments and get pre-approved.</p>
+            <div class="text-center mt-auto">
+              <a href="https://online.betterbond.co.za/ref/TiwJyyl5dHFhgGkGAzD8wxby6ks" class="btn lp-service-btn lp-service-btn-mustard">Get Pre-approved</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 

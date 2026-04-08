@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Sell Your Property – Larney Properties{% endblock %}
+
+{% block content %}
+
+<div class="lp-page-header py-4">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
+        </li>
+        <li class="breadcrumb-item active text-white">Sell Your Property</li>
+      </ol>
+    </nav>
+    <h1 class="text-white fw-bold mb-0 fs-3">
+      <i class="bi bi-tag-fill me-2" style="color:var(--lp-orange);"></i>Sell Your Property
+    </h1>
+    <p class="text-white-50 small mt-1 mb-0">
+      Fill in your details and one of our agents will contact you to get the process started.
+    </p>
+  </div>
+</div>
+
+<section class="py-5" style="background-color:var(--lp-bg);">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-9">
+
+        <!-- Why sell with us -->
+        <div class="row g-3 mb-5">
+          {% for icon, title, text in [
+            ('patch-check-fill', 'Expert Valuation', 'We provide a free, accurate market valuation for your property.'),
+            ('people-fill',      'Wide Reach',       'Your listing reaches thousands of qualified buyers.'),
+            ('headset',          'Full Support',     'Our agents guide you every step of the way to a successful sale.')
+          ] %}
+          <div class="col-12 col-sm-4">
+            <div class="d-flex align-items-start gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+              <div style="width:38px;height:38px;background:rgba(241,91,34,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-{{ icon }}" style="color:var(--lp-orange);font-size:1.1rem;"></i>
+              </div>
+              <div>
+                <p class="fw-bold mb-0 small" style="color:var(--lp-navy);">{{ title }}</p>
+                <p class="small text-muted mb-0">{{ text }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <form method="POST" action="{{ url_for('sell') }}" novalidate>
+
+          <!-- ── PERSONAL DETAILS ──────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-orange),var(--lp-mustard));"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);">
+                <i class="bi bi-person-fill lp-icon-accent me-2"></i>Your Details
+              </h6>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                  <input type="text" name="full_name" class="form-control"
+                         placeholder="e.g. Lani van der Berg"
+                         value="{{ form.get('full_name','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                  <input type="email" name="email" class="form-control"
+                         placeholder="e.g. lani@email.com"
+                         value="{{ form.get('email','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                  <input type="tel" name="phone" class="form-control"
+                         placeholder="e.g. 083 654 8010"
+                         value="{{ form.get('phone','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Best Time to Contact</label>
+                  <select name="contact_time" class="form-select">
+                    <option value="" {% if not form.get('contact_time') %}selected{% endif %}>Any time</option>
+                    <option value="Morning (8am–12pm)"   {% if form.get('contact_time') == 'Morning (8am–12pm)'   %}selected{% endif %}>Morning (8am – 12pm)</option>
+                    <option value="Afternoon (12pm–5pm)" {% if form.get('contact_time') == 'Afternoon (12pm–5pm)' %}selected{% endif %}>Afternoon (12pm – 5pm)</option>
+                    <option value="Evening (5pm–7pm)"    {% if form.get('contact_time') == 'Evening (5pm–7pm)'    %}selected{% endif %}>Evening (5pm – 7pm)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PROPERTY DETAILS ──────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:var(--lp-navy);"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);">
+                <i class="bi bi-house-fill lp-icon-accent me-2"></i>Property Details
+              </h6>
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label fw-semibold">Street Address <span class="text-danger">*</span></label>
+                  <input type="text" name="address" class="form-control"
+                         placeholder="e.g. 12 Oak Street"
+                         value="{{ form.get('address','') }}" required />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Suburb</label>
+                  <input type="text" name="suburb" class="form-control"
+                         placeholder="e.g. Nigel Ext 2"
+                         value="{{ form.get('suburb','') }}" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">City / Town</label>
+                  <input type="text" name="city" class="form-control"
+                         placeholder="e.g. Nigel"
+                         value="{{ form.get('city','') }}" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Property Type</label>
+                  <select name="property_type" class="form-select">
+                    {% for t in ['House','Apartment','Townhouse','Plot','Commercial','Farm'] %}
+                    <option value="{{ t }}" {% if form.get('property_type','House') == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SALE INFO ──────────────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div style="height:4px;background:linear-gradient(90deg,var(--lp-mustard),var(--lp-orange));"></div>
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);">
+                <i class="bi bi-currency-exchange lp-icon-accent me-2"></i>Sale Information
+              </h6>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Asking Price (R) <span class="text-muted small fw-normal">optional</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
+                    <input type="text" name="asking_price" class="form-control price-input"
+                           placeholder="e.g. 1 500 000"
+                           value="{{ form.get('asking_price','') }}" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SUBMIT ──────────────────────────────────────────────────── -->
+          <div class="card border-0 shadow-sm" style="border-radius:var(--lp-radius);overflow:hidden;">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="flex-grow-1">
+                  <p class="fw-semibold mb-0" style="color:var(--lp-navy);">Ready to take the next step?</p>
+                  <p class="small text-muted mb-0">
+                    We'll review your details and get back to you within 24 hours.
+                  </p>
+                </div>
+                <button type="submit" class="btn lp-btn-primary px-5 py-2 fw-bold">
+                  <i class="bi bi-send-fill me-2"></i>Submit Enquiry
+                </button>
+              </div>
+              <p class="form-text mt-3 mb-0 small">
+                <i class="bi bi-shield-lock-fill me-1" style="color:var(--lp-orange);"></i>
+                Your information is kept confidential and will only be used to contact you about your property.
+              </p>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.price-input').forEach(input => {
+    input.addEventListener('input', function () {
+      const digits = this.value.replace(/\D/g, '');
+      this.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    });
+  });
+</script>
+{% endblock %}
