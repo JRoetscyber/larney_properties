@@ -1,0 +1,64 @@
+Here's a summary of the changes made to the web application:
+
+**1. app.py**
+
+*   **Issue:** The database table for Home Price Estimation (HPE) leads (`Home_price_estimation_leads`) was commented out, preventing it from being created.
+    *   **Change:** Uncommented the `CREATE TABLE IF NOT EXISTS Home_price_estimation_leads` statement within the `migrate_db()` function.
+    *   **Reason:** To ensure the database correctly creates the table needed to store HPE lead information.
+
+*   **Issue:** The `/HPE` route, responsible for handling the Home Price Estimation form, was entirely commented out. It also had minor logical and syntax errors.
+    *   **Change:**
+        *   Uncommented the `@app.route("/HPE", methods=["GET", "POST"])` decorator and the associated `HPE()` function.
+        *   Explicitly defined `status = "New"` for new HPE leads.
+        *   Corrected the redirect after a successful form submission from `url_for("Home_price_estimation.html")` to `url_for("HPE")`.
+        *   Fixed the `render_template` call for the GET request and form re-submission from `render_template("Home_price_estimation.html.html", form={})` to `render_template("Home_price_estimation.html", form={})`.
+    *   **Reason:** To activate the HPE feature, enable proper handling of form submissions, and fix minor bugs in the route's logic and template rendering.
+
+*   **Issue:** The `admin_leads()` function only queried `seller_leads`, meaning HPE leads would not appear in the admin dashboard.
+    *   **Change:** Modified the SQL query within `admin_leads()` to use a `UNION ALL` statement, combining results from both `seller_leads` and `Home_price_estimation_leads`. A new column, `lead_type`, was added to distinguish between seller and HPE leads.
+    *   **Reason:** To display all types of leads (seller and HPE) in a unified view on the admin leads page.
+
+*   **Issue:** The `admin_lead_status()` function was designed only to update the status of `seller_leads` and did not account for `Home_price_estimation_leads`.
+    *   **Change:** Modified the `admin_lead_status()` function to retrieve a `lead_type` from the form submission. It now conditionally updates either the `seller_leads` table or the `Home_price_estimation_leads` table based on the `lead_type`.
+    *   **Reason:** To enable agents to update the status of both seller and HPE leads correctly from the admin panel.
+
+*   **Issue:** There was no functionality to delete leads from the admin panel.
+    *   **Change:** Added a new `admin_delete_lead` route (`/admin/leads/<int:lead_id>/delete`) that handles POST requests. It identifies the `lead_type` and `lead_id` from the form, deletes the corresponding lead from either the `seller_leads` or `Home_price_estimation_leads` table, and provides appropriate flash messages.
+    *   **Reason:** To provide administrators with the ability to manage and remove unwanted leads from the database.
+
+*   **Issue (Fix for `werkzeug.routing.exceptions.BuildError`):** The `agents_page` function was accidentally misplaced and incorrectly indented within `app.py` after previous modifications, making it inaccessible.
+    *   **Change:** Relocated and re-indented the `agents_page` function to its correct top-level scope within `app.py`.
+    *   **Reason:** To resolve the `BuildError` caused by Flask being unable to find the `agents_page` endpoint, ensuring the "Our Agents" page functions correctly.
+
+**2. templates/base.html**
+
+*   **Issue:** The navigation link for "Home Price Estimation" was commented out, making it inaccessible to users.
+    *   **Change:** Uncommented the `<li>` element containing the `<a>` tag for the "Home Price Estimation" link in the main navigation bar.
+    *   **Reason:** To make the Home Price Estimation page accessible to users through the navigation menu.
+
+**3. templates/index.html**
+
+*   **Issue:** No specific issues were found related to commented-out HPE code. The link to the HPE page in the service section was already correctly implemented.
+    *   **Change:** No changes were made to this file.
+    *   **Reason:** The file correctly integrated the HPE feature without requiring modifications.
+
+**4. templates/Home_price_estimation.html**
+
+*   **Issue:** No specific issues were found. The template was well-structured and complete for its intended purpose.
+    *   **Change:** No changes were made to this file.
+    *   **Reason:** The template was already functional and correctly designed.
+
+**5. templates/admin_leads.html**
+
+*   **Issue:** The admin leads display did not differentiate between lead types, and fields specific to seller leads were always displayed, even for HPE leads (which lack those fields). The status update form also did not pass the `lead_type`.
+    *   **Change:**
+        *   Added a conditional badge `{% if lead['lead_type'] == 'hpe' %}<span class="badge bg-info ms-2">HPE Lead</span>{% endif %}` next to the lead's creation timestamp to visually identify HPE leads.
+        *   Wrapped seller-specific property detail fields (like `heard_from`, `bedrooms`, `bathrooms`, `garages`, `size_sqm`, `asking_price`, `occupied`, `bond_outstanding`) within an `{% if lead['lead_type'] == 'seller' %}` block.
+        *   Added a hidden input field `<input type="hidden" name="lead_type" value="{{ lead['lead_type'] }}" />` inside the status update form.
+    *   **Reason:** To provide clear visual distinction between lead types, ensure that only relevant information is displayed for each lead, and correctly pass the lead type to the backend for status updates.
+
+*   **New Feature: Delete Lead Button:**
+    *   Added a "Delete Lead" button within a `<form>` element for each lead, allowing administrators to initiate lead deletion.
+    *   The form submits to the new `admin_delete_lead` route, passing the necessary `lead_id` and `lead_type`.
+    *   Includes a JavaScript `confirm()` dialog for user confirmation before deletion.
+    *   **Reason:** To provide a user interface element to trigger the lead deletion functionality implemented in `app.py`.

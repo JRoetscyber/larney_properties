@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Sell Your Property – Larney Properties{% endblock %}
+{% block title %}Get Home Price Estimation – Larney Properties{% endblock %}
 
 {% block content %}
 
@@ -10,11 +10,11 @@
         <li class="breadcrumb-item">
           <a href="{{ url_for('index') }}" class="text-white-50 text-decoration-none">Home</a>
         </li>
-        <li class="breadcrumb-item active text-white">Sell Your Property</li>
+        <li class="breadcrumb-item active text-white">Get Home Price Estimation</li>
       </ol>
     </nav>
     <h1 class="text-white fw-bold mb-0 fs-3">
-      <i class="bi bi-tag-fill me-2" style="color:var(--lp-orange);"></i>Sell Your Property
+      <i class="bi bi-tag-fill me-2" style="color:var(--lp-orange);"></i>Get Home Price Estimation
     </h1>
     <p class="text-white-50 small mt-1 mb-0">
       Fill in your details and one of our agents will contact you to get the process started.
@@ -48,7 +48,7 @@
           {% endfor %}
         </div>
 
-        <form method="POST" action="{{ url_for('sell') }}" novalidate>
+        <form method="POST" action="{{ url_for('HPE') }}" novalidate>
 
           <!-- ── PERSONAL DETAILS ──────────────────────────────────────── -->
           <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
@@ -61,13 +61,13 @@
                 <div class="col-12 col-sm-6">
                   <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
                   <input type="text" name="full_name" class="form-control"
-                         placeholder="e.g. Lani van der Berg"
+                         placeholder="e.g. Jonathan Roets"
                          value="{{ form.get('full_name','') }}" required />
                 </div>
                 <div class="col-12 col-sm-6">
                   <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
                   <input type="email" name="email" class="form-control"
-                         placeholder="e.g. lani@email.com"
+                         placeholder="e.g. lani@gmail.com"
                          value="{{ form.get('email','') }}" required />
                 </div>
                 <div class="col-12 col-sm-6">
@@ -122,27 +122,6 @@
                     <option value="{{ t }}" {% if form.get('property_type','House') == t %}selected{% endif %}>{{ t }}</option>
                     {% endfor %}
                   </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── SALE INFO ──────────────────────────────────────────────── -->
-          <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--lp-radius);overflow:hidden;">
-            <div style="height:4px;background:linear-gradient(90deg,var(--lp-mustard),var(--lp-orange));"></div>
-            <div class="card-body p-4">
-              <h6 class="fw-bold mb-4" style="color:var(--lp-navy);">
-                <i class="bi bi-currency-exchange lp-icon-accent me-2"></i>Sale Information
-              </h6>
-              <div class="row g-3">
-                <div class="col-12 col-sm-6">
-                  <label class="form-label fw-semibold">Asking Price (R) <span class="text-muted small fw-normal">optional</span></label>
-                  <div class="input-group">
-                    <span class="input-group-text fw-bold" style="color:var(--lp-orange);">R</span>
-                    <input type="text" name="asking_price" class="form-control price-input"
-                           placeholder="e.g. 1 500 000"
-                           value="{{ form.get('asking_price','') }}" />
-                  </div>
                 </div>
               </div>
             </div>

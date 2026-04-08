@@ -142,7 +142,25 @@ def migrate_db():
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # property_images gallery table
+        
+         # Home price estimation leads
+        db.execute("""
+             CREATE TABLE IF NOT EXISTS Home_price_estimation_leads (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name       TEXT NOT NULL,
+                email           TEXT NOT NULL,
+                phone           TEXT NOT NULL,
+                contact_time    TEXT DEFAULT '',
+                address         TEXT NOT NULL,
+                suburb          TEXT DEFAULT '',
+                city            TEXT DEFAULT '',
+                property_type   TEXT DEFAULT 'House',
+                status          TEXT DEFAULT 'New',
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+         
+         #property_images gallery table
         db.execute("""
             CREATE TABLE IF NOT EXISTS property_images (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1123,14 +1141,58 @@ def sell():
 
     return render_template("sell.html", form={})
 
+@app.route("/HPE", methods=["GET", "POST"])
+def HPE():
+    if request.method == "POST":
+        full_name        = request.form.get("full_name",        "").strip()
+        email            = request.form.get("email",            "").strip()
+        phone            = request.form.get("phone",            "").strip()
+        contact_time     = request.form.get("contact_time",     "").strip()
+        address          = request.form.get("address",          "").strip()
+        suburb           = request.form.get("suburb",           "").strip()
+        city             = request.form.get("city",             "").strip()
+        property_type    = request.form.get("property_type",    "House")
+        status           = "New" # Define status as "New"
+
+        errors = []
+        if not full_name: errors.append("Full name is required.")
+        if not email:     errors.append("Email address is required.")
+        if not phone:     errors.append("Phone number is required.")
+        if not address:   errors.append("Property address is required.")
+
+        if errors:
+            for e in errors:
+                flash(e, "danger")
+            return render_template("Home_price_estimation.html", form=request.form)
+
+        from datetime import datetime, timezone, timedelta
+        sast = datetime.now(timezone(timedelta(hours=2))).strftime("%Y-%m-%d %H:%M:%S")
+        db = get_db()
+        db.execute("""
+            INSERT INTO Home_price_estimation_leads
+                (full_name, email, phone, contact_time, address, suburb, city,
+                 property_type, status, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, (full_name, email, phone, contact_time, address, suburb, city,
+              property_type, status, sast))
+        db.commit()
+        flash("Thank you! We will be in touch with you shortly.", "success")
+        return redirect(url_for("HPE"))
+
+    return render_template("Home_price_estimation.html", form={})
+
 
 @app.route("/admin/leads")
 @admin_required
 def admin_leads():
     db    = get_db()
     leads = db.execute(
-        "SELECT * FROM seller_leads ORDER BY created_at DESC"
-        #"SELECT * FROM Home_price_estimation_leads ORDER BY created_at"
+        """
+        SELECT id, full_name, email, phone, contact_time, address, suburb, city, property_type, status, created_at, 'seller' AS lead_type FROM seller_leads
+        UNION ALL
+        SELECT id, full_name, email, phone, contact_time, address, suburb, city, property_type, status, created_at, 'hpe' AS lead_type FROM Home_price_estimation_leads
+        ORDER BY created_at DESC
+        """
     ).fetchall()
     return render_template("admin_leads.html", leads=leads)
 
@@ -1138,10 +1200,45 @@ def admin_leads():
 @app.route("/admin/leads/<int:lead_id>/status", methods=["POST"])
 @admin_required
 def admin_lead_status(lead_id):
-    status = request.form.get("status", "New")
+    status    = request.form.get("status", "New")
+    lead_type = request.form.get("lead_type") # Get lead_type from form
     db = get_db()
-    db.execute("UPDATE seller_leads SET status = ? WHERE id = ?", (status, lead_id))
+    if lead_type == 'seller':
+        db.execute("UPDATE seller_leads SET status = ? WHERE id = ?", (status, lead_id))
+    elif lead_type == 'hpe':
+        db.execute("UPDATE Home_price_estimation_leads SET status = ? WHERE id = ?", (status, lead_id))
     db.commit()
+    return redirect(url_for("admin_leads"))
+
+
+@app.route("/admin/leads/<int:lead_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_lead(lead_id):
+    lead_type = request.form.get("lead_type")
+    db = get_db()
+    lead_name = "" # To store the name of the deleted lead
+
+    if lead_type == 'seller':
+        lead = db.execute("SELECT full_name FROM seller_leads WHERE id = ?", (lead_id,)).fetchone()
+        if lead:
+            lead_name = lead["full_name"]
+            db.execute("DELETE FROM seller_leads WHERE id = ?", (lead_id,))
+            db.commit()
+            flash(f"Seller lead '{lead_name}' deleted successfully.", "success")
+        else:
+            flash("Seller lead not found.", "danger")
+    elif lead_type == 'hpe':
+        lead = db.execute("SELECT full_name FROM Home_price_estimation_leads WHERE id = ?", (lead_id,)).fetchone()
+        if lead:
+            lead_name = lead["full_name"]
+            db.execute("DELETE FROM Home_price_estimation_leads WHERE id = ?", (lead_id,))
+            db.commit()
+            flash(f"Home Price Estimation lead '{lead_name}' deleted successfully.", "success")
+        else:
+            flash("Home Price Estimation lead not found.", "danger")
+    else:
+        flash("Invalid lead type specified for deletion.", "danger")
+
     return redirect(url_for("admin_leads"))
 
 

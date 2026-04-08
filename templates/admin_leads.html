@@ -84,6 +84,9 @@
                 <p class="fw-bold mb-0" style="color:var(--lp-navy);">{{ lead['full_name'] }}</p>
                 <p class="small text-muted mb-0">
                   {{ lead['created_at'][:16].replace('T', ' ') if 'T' in lead['created_at'] else lead['created_at'][:16] }}
+                  {% if lead['lead_type'] == 'hpe' %}
+                    <span class="badge bg-info ms-2">HPE Lead</span>
+                  {% endif %}
                 </p>
               </div>
             </div>
@@ -100,10 +103,12 @@
               <i class="bi bi-clock-fill me-2" style="color:var(--lp-orange);"></i>{{ lead['contact_time'] }}
             </p>
             {% endif %}
-            {% if lead['heard_from'] %}
-            <p class="small mb-0">
-              <i class="bi bi-megaphone-fill me-2" style="color:var(--lp-orange);"></i>{{ lead['heard_from'] }}
-            </p>
+            {% if lead['lead_type'] == 'seller' %}
+              {% if lead['heard_from'] %}
+              <p class="small mb-0">
+                <i class="bi bi-megaphone-fill me-2" style="color:var(--lp-orange);"></i>{{ lead['heard_from'] }}
+              </p>
+              {% endif %}
             {% endif %}
           </div>
 
@@ -114,38 +119,40 @@
             </p>
             <p class="small mb-1 fw-semibold">{{ lead['address'] }}{% if lead['suburb'] %}, {{ lead['suburb'] }}{% endif %}{% if lead['city'] %}, {{ lead['city'] }}{% endif %}</p>
             <p class="small text-muted mb-1">{{ lead['property_type'] }}</p>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-              {% if lead['bedrooms'] %}
-              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
-                <i class="bi bi-door-open-fill me-1"></i>{{ lead['bedrooms'] }} bed
-              </span>
+            {% if lead['lead_type'] == 'seller' %}
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                {% if lead['bedrooms'] %}
+                <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                  <i class="bi bi-door-open-fill me-1"></i>{{ lead['bedrooms'] }} bed
+                </span>
+                {% endif %}
+                {% if lead['bathrooms'] %}
+                <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                  <i class="bi bi-droplet-fill me-1"></i>{{ lead['bathrooms'] }} bath
+                </span>
+                {% endif %}
+                {% if lead['garages'] %}
+                <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                  <i class="bi bi-car-front-fill me-1"></i>{{ lead['garages'] }} garage
+                </span>
+                {% endif %}
+                {% if lead['size_sqm'] %}
+                <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
+                  <i class="bi bi-arrows-fullscreen me-1"></i>{{ lead['size_sqm'] }} m²
+                </span>
+                {% endif %}
+              </div>
+              {% if lead['asking_price'] %}
+              <p class="small mb-1 fw-bold" style="color:var(--lp-orange);">
+                R {{ lead['asking_price'] }}
+              </p>
               {% endif %}
-              {% if lead['bathrooms'] %}
-              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
-                <i class="bi bi-droplet-fill me-1"></i>{{ lead['bathrooms'] }} bath
-              </span>
+              {% if lead['occupied'] %}
+              <p class="small text-muted mb-1">{{ lead['occupied'] }}</p>
               {% endif %}
-              {% if lead['garages'] %}
-              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
-                <i class="bi bi-car-front-fill me-1"></i>{{ lead['garages'] }} garage
-              </span>
+              {% if lead['bond_outstanding'] %}
+              <p class="small text-muted mb-0">Bond outstanding: {{ lead['bond_outstanding'] }}</p>
               {% endif %}
-              {% if lead['size_sqm'] %}
-              <span class="badge" style="background:rgba(27,38,86,0.08);color:var(--lp-navy);">
-                <i class="bi bi-arrows-fullscreen me-1"></i>{{ lead['size_sqm'] }} m²
-              </span>
-              {% endif %}
-            </div>
-            {% if lead['asking_price'] %}
-            <p class="small mb-1 fw-bold" style="color:var(--lp-orange);">
-              R {{ lead['asking_price'] }}
-            </p>
-            {% endif %}
-            {% if lead['occupied'] %}
-            <p class="small text-muted mb-1">{{ lead['occupied'] }}</p>
-            {% endif %}
-            {% if lead['bond_outstanding'] %}
-            <p class="small text-muted mb-0">Bond outstanding: {{ lead['bond_outstanding'] }}</p>
             {% endif %}
           </div>
 
@@ -156,14 +163,22 @@
             </p>
             <form method="POST" action="{{ url_for('admin_lead_status', lead_id=lead['id']) }}"
                   class="d-flex gap-2 mb-3">
+              <input type="hidden" name="lead_type" value="{{ lead['lead_type'] }}" />
               <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 {% for s in ['New', 'Contacted', 'Mandated', 'Closed', 'Not Interested'] %}
                 <option value="{{ s }}" {% if lead['status'] == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
               </select>
             </form>
+            <form method="POST" action="{{ url_for('admin_delete_lead', lead_id=lead['id']) }}"
+                  onsubmit="return confirm('Are you sure you want to delete this lead?');">
+                <input type="hidden" name="lead_type" value="{{ lead['lead_type'] }}" />
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                    <i class="bi bi-trash-fill me-1"></i>Delete Lead
+                </button>
+            </form>
             {% if lead['notes'] %}
-            <p class="small fw-semibold mb-1" style="color:var(--lp-navy);">Notes</p>
+            <p class="small fw-semibold mt-3 mb-1" style="color:var(--lp-navy);">Notes</p>
             <p class="small text-muted mb-0" style="white-space:pre-line;">{{ lead['notes'] }}</p>
             {% endif %}
           </div>
