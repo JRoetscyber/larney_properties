@@ -55,6 +55,12 @@ main { flex: 1; }
   max-width: 200px;
 }
 
+@media (max-width: 768px) {
+  .lp-navbar-logo {
+    height: 60px;
+  }
+}
+
 .lp-navbar .nav-link {
   color: rgba(255,255,255,0.78) !important;
   font-size: 0.875rem;
@@ -314,7 +320,12 @@ main { flex: 1; }
 .lp-stat-pill {
   text-align: center;
   padding: 12px 32px;
-  border-right: 1px solid rgba(255,255,255,0.15);
+}
+
+@media (min-width: 576px) {
+  .lp-stat-pill {
+    border-right: 1px solid rgba(255,255,255,0.15);
+  }
 }
 
 .lp-stat-pill:last-child { border-right: none; }
@@ -326,6 +337,49 @@ main { flex: 1; }
   color: var(--lp-orange);
   line-height: 1;
 }
+
+.lp-dashboard-stat-num {
+  font-size: 1.8rem; /* Default for larger screens */
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .lp-dashboard-stat-num {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .lp-dashboard-stat-num {
+    font-size: 1.4rem;
+  }
+}
+
+/* Responsive borders for dashboard stats */
+.lp-dashboard-stat-item {
+  padding-bottom: 1rem; /* Add some space when stacked */
+  margin-bottom: 1rem; /* Add some space when stacked */
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.lp-dashboard-stat-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+@media (min-width: 768px) { /* md breakpoint */
+  .lp-dashboard-stat-item {
+    border-bottom: none; /* Remove bottom border when side-by-side */
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  .lp-dashboard-stat-border {
+    border-right: 1px solid rgba(0,0,0,0.1); /* Add right border on medium screens and up */
+  }
+}
+
 
 .lp-stat-label {
   display: block;
