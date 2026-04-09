@@ -46,6 +46,7 @@
                 <input type="number" id="price" class="form-control form-control-lg"
                        value="1500000" min="0" step="50000" />
               </div>
+              <div class="form-text text-muted mt-1" id="priceFormatted">R 1 500 000</div>
               <input type="range" id="priceRange" class="form-range lp-range-input mt-2"
                      min="100000" max="20000000" step="50000" value="1500000" />
               <div class="d-flex justify-content-between">
@@ -65,6 +66,7 @@
                        value="0" min="0" step="10000" />
                 <span class="input-group-text text-muted" id="depositPct">0%</span>
               </div>
+              <div class="form-text text-muted mt-1" id="depositFormatted">R 0</div>
               <input type="range" id="depositRange" class="form-range lp-range-input"
                      min="0" max="100" step="1" value="0" />
               <div class="d-flex justify-content-between">
@@ -101,7 +103,7 @@
               </label>
               <div class="d-flex gap-2 flex-wrap">
                 {% for yr in [5, 10, 15, 20, 25, 30] %}
-                <button class="btn btn-sm lp-btn-outline term-btn {% if yr == 20 %}lp-btn-primary text-white{% endif %}"
+                <button class="btn btn-sm term-btn {% if yr == 20 %}lp-btn-primary text-white{% else %}lp-btn-outline{% endif %}"
                         data-years="{{ yr }}">{{ yr }} yrs</button>
                 {% endfor %}
               </div>
@@ -220,6 +222,11 @@ function fmt(n) {
   return 'R ' + Math.round(n).toLocaleString('en-ZA');
 }
 
+function updateFormattedValues(price, deposit) {
+  document.getElementById('priceFormatted').textContent = fmt(price);
+  document.getElementById('depositFormatted').textContent = fmt(deposit);
+}
+
 function calcBond(price, deposit, annualRate, years) {
   const P = price - deposit;
   if (P <= 0) return null;
@@ -288,6 +295,7 @@ function update() {
   const pct     = price > 0 ? Math.round(deposit / price * 100) : 0;
 
   document.getElementById('depositPct').textContent = pct + '%';
+  updateFormattedValues(price, deposit);
 
   const res = calcBond(price, deposit, rate, years);
 
