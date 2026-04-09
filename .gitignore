@@ -29,8 +29,11 @@ pip-wheel-metadata/
 *.db
 
 # Uploads and generated media
+ferryval_transfer_report.pdf
 uploads/
 static/uploads/
+assets/
+static/assets/
 
 # OS files
 .DS_Store
