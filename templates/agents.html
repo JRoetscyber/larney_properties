@@ -46,7 +46,7 @@
           <!-- Bio -->
           {% if agent['bio'] %}
           <p class="text-muted small mb-4" style="line-height:1.6;">
-            {{ agent['bio'][:180] }}{% if agent['bio']|length > 180 %}…{% endif %}
+            {{ agent['bio'][:300] }}{% if agent['bio']|length > 300 %}…{% endif %}
           </p>
           {% else %}
           <p class="text-muted small mb-4 fst-italic">No bio available yet.</p>
