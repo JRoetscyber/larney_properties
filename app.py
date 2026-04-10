@@ -12,7 +12,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 # ── App config ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = "larney-properties-secret-key"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "your_development_secret_key_here") # REPLACE 'your_development_secret_key_here' with a strong random value in production
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 DATABASE     = os.path.join(BASE_DIR, "properties.db")
