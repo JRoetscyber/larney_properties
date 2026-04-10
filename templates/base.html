@@ -369,6 +369,46 @@
   });
   btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
+  // Auto-hide navbar on scroll (mobile/tablet only)
+  (function () {
+    var navbar      = document.querySelector('.lp-navbar');
+    var lastScrollY = window.scrollY;
+
+    function applyPadding() {
+      if (window.innerWidth < 992) {
+        document.body.style.paddingTop = navbar.offsetHeight + 'px';
+      } else {
+        document.body.style.paddingTop = '';
+        navbar.classList.remove('lp-nav-hidden');
+      }
+    }
+
+    applyPadding();
+    window.addEventListener('resize', applyPadding, { passive: true });
+
+    window.addEventListener('scroll', function () {
+      if (window.innerWidth >= 992) { lastScrollY = window.scrollY; return; }
+
+      var currentScrollY = window.scrollY;
+
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        // Scrolling down past 60 px → hide
+        navbar.classList.add('lp-nav-hidden');
+        // Close hamburger if open
+        var nav = document.getElementById('mainNav');
+        if (nav && nav.classList.contains('show')) {
+          nav.classList.remove('show');
+          document.getElementById('navToggleBtn').setAttribute('aria-expanded', 'false');
+        }
+      } else {
+        // Scrolling up → show
+        navbar.classList.remove('lp-nav-hidden');
+      }
+
+      lastScrollY = currentScrollY;
+    }, { passive: true });
+  }());
+
   // Hamburger / collapse toggle
   (function () {
     var toggler = document.getElementById('navToggleBtn');
