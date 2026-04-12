@@ -35,7 +35,7 @@
             <img id="galMain"
                  src="{{ url_for('static', filename='uploads/' ~ gallery[0]['filename']) }}"
                  alt="{{ prop['title'] }}"
-                 style="width:100%;height:420px;object-fit:cover;display:block;transition:opacity 0.2s;" />
+                 style="width:100%;height:100%;object-fit:contain;display:block;transition:opacity 0.2s;" />
 
             {% if gallery|length > 1 %}
             <!-- Arrows -->

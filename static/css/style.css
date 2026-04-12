@@ -42,6 +42,22 @@ main { flex: 1; }
   padding-bottom: 0.6rem;
 }
 
+/* Mobile/tablet: fix navbar to top and animate it away on scroll */
+@media (max-width: 991.98px) {
+  .lp-navbar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1030;
+    transition: top 0.3s ease;
+  }
+  .lp-navbar.lp-nav-hidden {
+    top: -110px;
+  }
+}
+
 .lp-navbar .navbar-brand {
   font-size: 1.15rem;
   letter-spacing: 0.3px;
@@ -415,6 +431,14 @@ main { flex: 1; }
   top: 56px;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: top 0.3s ease;
+}
+
+/* When the collapsing navbar hides on mobile, filter bar fills the gap */
+@media (max-width: 991.98px) {
+  .lp-navbar.lp-nav-hidden ~ main .lp-filter-bar {
+    top: 0;
+  }
 }
 
 .lp-pill {
@@ -493,7 +517,7 @@ main { flex: 1; }
 }
 
 .lp-card-img {
-  height: 210px;
+  height: 200px;
   object-fit: cover;
   width: 100%;
   transition: transform 0.4s ease;
