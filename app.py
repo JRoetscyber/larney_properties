@@ -994,8 +994,7 @@ def scrape_listing():
                 viewport={"width": 1280, "height": 800},
             )
             page = ctx.new_page()
-            page.goto(url, wait_until="networkidle", timeout=30000)
-            time.sleep(2)
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
             html = page.content()
             browser.close()
 
