@@ -972,8 +972,7 @@ def cma():
 @login_required
 def scrape_listing():
     """Fetch a Property24 URL, parse it, save the image, return JSON."""
-    import time, uuid
-    from playwright.sync_api import sync_playwright
+    import time, uuid, cloudscraper
     from bs4 import BeautifulSoup
 
     body = request.get_json() or {}
@@ -982,23 +981,18 @@ def scrape_listing():
         return jsonify({"error": "URL is required"}), 400
 
     try:
-        # ── Fetch page with a real browser ────────────────────────────────
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            ctx     = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
-                viewport={"width": 1280, "height": 800},
-            )
-            page = ctx.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            html = page.content()
-            browser.close()
-
-        soup   = BeautifulSoup(html, "html.parser")
+        # ── Fetch page with Cloudscraper to bypass bot protection ──────
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
+        
+        response = scraper.get(url, timeout=30)
+        html = response.text
+        soup = BeautifulSoup(html, "html.parser")
         result = {}
 
         # Title
